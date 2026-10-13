@@ -1014,6 +1014,12 @@
       "fleet1_boss_fleet2_mob": "fleet1_boss_fleet2_mob",
       "fleet1_all_fleet2_standby": "fleet1_all_fleet2_standby",
       "fleet1_standby_fleet2_all": "fleet1_standby_fleet2_all"
+    },
+    "HardLineup": {
+      "name": "Empty Hard Mode Lineup",
+      "help": "What to do when a hard stage has no ships assigned to a fleet in use.\n\"advice\" fills the fleet with the Advice button of the game, which picks your strongest ships that meet the restrictions of the stage",
+      "stop": "Stop and ask me",
+      "advice": "Fill with Advice"
     }
   },
   "Submarine": {

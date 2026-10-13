@@ -110,20 +110,31 @@ class FleetOperator:
                     main.device.click(self._clear)
                     click_timer.reset()
 
-    def recommend(self):
+    def advise(self):
         """
-        Recommend fleet
+        Fill the fleet of a hard stage with the ships the game recommends, if it has no ships yet.
+
+        Returns:
+            bool: If current fleet satisfies hard restrictions now.
+                Or None if this is not a hard mode
         """
         main = self.main
         click_timer = Timer(3, count=6)
+        clicks = 0
         for _ in main.loop():
             # End
-            if self.in_use():
-                break
+            satisfied = self.is_hard_satisfied()
+            if satisfied is not False:
+                return satisfied
 
             # Click
             if click_timer.reached():
-                main.device.click(self._choose)
+                if clicks >= 3:
+                    logger.warning(f'Fleet {self} is still not prepared after asking for advice {clicks} times')
+                    return False
+                logger.info(f'Fleet {self} is not prepared, asking the game for advice')
+                main.device.click(self._advice)
+                clicks += 1
                 click_timer.reset()
 
     def update_options(self):
@@ -305,6 +316,13 @@ class FleetPreparation(InfoHandler):
         h1, h2, h3 = fleet_1.is_hard_satisfied(), fleet_2.is_hard_satisfied(), submarine.is_hard_satisfied()
         logger.info(f'Hard satisfied: Fleet_1: {h1}, Fleet_2: {h2}, Submarine: {h3}')
         if self.config.SERVER in ['cn', 'en', 'jp']:
+            if self.config.Fleet_HardLineup == 'advice':
+                if self.config.Fleet_Fleet1:
+                    h1 = fleet_1.advise()
+                if self.config.Fleet_Fleet2:
+                    h2 = fleet_2.advise()
+                if self.config.Submarine_Fleet:
+                    h3 = submarine.advise()
             if self.config.Fleet_Fleet1:
                 fleet_1.raise_hard_not_satisfied()
             if self.config.Fleet_Fleet2:

@@ -1014,6 +1014,12 @@
       "fleet1_boss_fleet2_mob": "fleet1_boss_fleet2_mob",
       "fleet1_all_fleet2_standby": "fleet1_all_fleet2_standby",
       "fleet1_standby_fleet2_all": "fleet1_standby_fleet2_all"
+    },
+    "HardLineup": {
+      "name": "ハードモードの編成が空の場合",
+      "help": "ハード海域で使用する艦隊に艦船が設定されていない場合の動作。\n\"おすすめ\" はゲーム内のおすすめボタンで、海域の制限を満たす最も強い艦船を自動で編成します",
+      "stop": "停止して手動対応を求める",
+      "advice": "おすすめ編成を使う"
     }
   },
   "Submarine": {

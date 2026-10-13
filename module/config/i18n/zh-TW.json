@@ -1014,6 +1014,12 @@
       "fleet1_boss_fleet2_mob": "一隊Boss二隊道中",
       "fleet1_all_fleet2_standby": "一隊全清二隊待機",
       "fleet1_standby_fleet2_all": "一隊待機二隊全清"
+    },
+    "HardLineup": {
+      "name": "困難模式編隊為空時",
+      "help": "困難關卡中使用的艦隊沒有配置艦船時的處理方式。\n\"推薦\" 會點擊遊戲內的推薦按鈕，自動選擇滿足關卡限制的最強艦船",
+      "stop": "停止並請求人工接管",
+      "advice": "使用推薦編隊"
     }
   },
   "Submarine": {
