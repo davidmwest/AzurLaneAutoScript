@@ -1,5 +1,6 @@
 import copy
 import operator
+import os
 import threading
 from datetime import datetime, timedelta
 
@@ -10,7 +11,8 @@ from module.config.config_generated import GeneratedConfig
 from module.config.config_manual import ManualConfig, OutputConfig
 from module.config.config_updater import ConfigUpdater, ensure_time, get_server_next_update, nearest_future
 from module.config.deep import deep_get, deep_set
-from module.config.utils import DEFAULT_TIME, dict_to_kv, filepath_config, get_os_reset_remain, path_to_arg
+from module.config.utils import DEFAULT_TIME, dict_to_kv, filepath_config, filepath_pause, get_os_reset_remain, \
+    path_to_arg
 from module.config.watcher import ConfigWatcher
 from module.exception import RequestHumanTakeover, ScriptError
 from module.logger import logger
@@ -586,6 +588,14 @@ class AzurLaneConfig(ConfigUpdater, ManualConfig, GeneratedConfig, ConfigWatcher
         else:
             raise TaskEnd
 
+    @property
+    def pause_requested(self):
+        """
+        Returns:
+            bool: If the user asked the scheduler to hold, by creating ./config/<config_name>.pause
+        """
+        return os.path.exists(filepath_pause(self.config_name))
+
     def task_switched(self):
         """
         Check if needs to switch task.
@@ -597,6 +607,11 @@ class AzurLaneConfig(ConfigUpdater, ManualConfig, GeneratedConfig, ConfigWatcher
         if self.stop_event is not None:
             if self.stop_event.is_set():
                 return True
+        # A long task like event farming ends here, at a point where it is safe to stop,
+        # and the scheduler holds before the next task
+        if self.pause_requested:
+            logger.info(f'Pause requested, leave task `{self.task}`')
+            return True
         prev = self.task
         self.load()
         new = self.get_next()

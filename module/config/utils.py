@@ -62,6 +62,13 @@ def filepath_config(filename, mod_name='alas'):
         return os.path.join('./config', f'{filename}.{mod_name}.json')
 
 
+def filepath_pause(filename):
+    """
+    The scheduler of config `filename` holds between tasks while this file exists.
+    """
+    return os.path.join('./config', f'{filename}.pause')
+
+
 def filepath_code():
     return './module/config/config_generated.py'
 

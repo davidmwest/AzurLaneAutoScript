@@ -10,6 +10,7 @@ from cached_property import cached_property
 from module.base.decorator import del_cached_property
 from module.config.config import AzurLaneConfig, TaskEnd
 from module.config.deep import deep_get, deep_set
+from module.config.utils import filepath_pause
 from module.exception import *
 from module.logger import logger
 from module.notify import handle_notify
@@ -489,6 +490,29 @@ class AzurLaneAutoScript:
             if self.config.should_reload():
                 return False
 
+    def wait_while_paused(self):
+        """
+        Hold between tasks while ./config/<config_name>.pause exists,
+        so the game can be used by hand or by another script without killing Alas in the middle of something.
+        Tasks that check for a task switch, like the farming ones, end at their next check.
+
+        Returns:
+            bool: If paused.
+        """
+        if not self.config.pause_requested:
+            return False
+
+        logger.hr('Paused', level=1)
+        logger.info(f'Scheduler is paused, delete {filepath_pause(self.config_name)} to continue')
+        while self.config.pause_requested:
+            if self.stop_event is not None and self.stop_event.is_set():
+                break
+            time.sleep(2)
+        logger.info('Scheduler continues')
+        # Config may have been edited during the pause
+        del_cached_property(self, 'config')
+        return True
+
     def get_next_task(self):
         """
         Returns:
@@ -557,6 +581,8 @@ class AzurLaneAutoScript:
                     logger.info("Update event detected")
                     logger.info(f"Alas [{self.config_name}] exited.")
                     break
+            # Hold while the user asks for a pause
+            self.wait_while_paused()
             # Check game server maintenance
             self.checker.wait_until_available()
             if self.checker.is_recovered():
