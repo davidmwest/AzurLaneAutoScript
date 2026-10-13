@@ -23,6 +23,7 @@ from module.device.method.remove_warning import remove_shell_warning
 from module.device.method.utils import (PackageNotInstalled, RETRY_TRIES, get_serial_pair, handle_adb_error,
                                         handle_unknown_host_service, possible_reasons, random_port, recv_all,
                                         retry_sleep)
+from module.device.resolution import CANVAS_HEIGHT, CANVAS_WIDTH, canvas_scale, parse_wm_size, point_to_device
 from module.exception import EmulatorNotRunningError, RequestHumanTakeover
 from module.logger import logger
 from module.map.map_grids import SelectedGrids
@@ -294,6 +295,30 @@ class Connection(ConnectionAttr):
             logger.error(f'SDK version invalid: {sdk}')
 
         return 0
+
+    @cached_property
+    @retry
+    def display_scale(self) -> float:
+        """
+        Device pixels per canvas pixel, 1.0 on 1280x720 and 2.0 on 2560x1440.
+        See module/device/resolution.py
+        """
+        width, height = parse_wm_size(self.adb_shell(['wm', 'size']))
+        scale = canvas_scale(width, height)
+        if scale is None:
+            # Unsupported size, check_screen_size() will report it from the first screenshot
+            logger.warning(f'Display size {width}x{height} cannot be scaled to '
+                           f'{CANVAS_WIDTH}x{CANVAS_HEIGHT}')
+            return 1.0
+        logger.attr('Display_scale', f'{width}x{height} = {CANVAS_WIDTH}x{CANVAS_HEIGHT} x{scale:g}')
+        return scale
+
+    def canvas_to_device(self, x, y):
+        """
+        Convert a point on the 1280x720 canvas to device pixels,
+        for control methods that take raw device pixels.
+        """
+        return point_to_device(x, y, self.display_scale)
 
     @cached_property
     @retry

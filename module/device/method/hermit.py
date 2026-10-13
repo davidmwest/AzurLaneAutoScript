@@ -241,4 +241,5 @@ class Hermit(Adb):
 
     @retry
     def click_hermit(self, x, y):
+        x, y = self.canvas_to_device(x, y)
         self.hermit_send('/click', x=x, y=y)

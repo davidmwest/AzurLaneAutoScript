@@ -17,6 +17,7 @@ from module.device.method.ldopengl import LDOpenGL
 from module.device.method.nemu_ipc import NemuIpc
 from module.device.method.scrcpy import Scrcpy
 from module.device.method.wsa import WSA
+from module.device.resolution import canvas_scale, image_to_canvas
 from module.exception import RequestHumanTakeover, ScriptError
 from module.logger import logger
 
@@ -68,6 +69,7 @@ class Screenshot(Adb, WSA, DroidCast, AScreenCap, Scrcpy, NemuIpc, LDOpenGL):
                 # This will take 40-60ms
                 cv2.fastNlMeansDenoising(self.image, self.image, h=17, templateWindowSize=1, searchWindowSize=2)
             self.image = self._handle_orientated_image(self.image)
+            self.image = image_to_canvas(self.image)
 
             if self.config.Error_SaveError:
                 self.screenshot_deque.append({'time': datetime.now(), 'image': self.image})
@@ -92,10 +94,10 @@ class Screenshot(Adb, WSA, DroidCast, AScreenCap, Scrcpy, NemuIpc, LDOpenGL):
             np.ndarray:
         """
         width, height = image_size(self.image)
-        if width == 1280 and height == 720:
+        if width > height and canvas_scale(width, height) is not None:
             return image
 
-        # Rotate screenshots only when they're not 1280x720
+        # Rotate screenshots only when they're not 1280x720 or a multiple of it
         if self.orientation == 0:
             pass
         elif self.orientation == 1:
@@ -204,7 +206,8 @@ class Screenshot(Adb, WSA, DroidCast, AScreenCap, Scrcpy, NemuIpc, LDOpenGL):
 
     def check_screen_size(self):
         """
-        Screen size must be 1280x720.
+        Screen size must be 1280x720 once scaled to the canvas,
+        which screenshot() does for any larger 16:9 size.
         Take a screenshot before call.
         """
         if self._screen_size_checked:
@@ -237,7 +240,8 @@ class Screenshot(Adb, WSA, DroidCast, AScreenCap, Scrcpy, NemuIpc, LDOpenGL):
                 return True
             else:
                 logger.critical(f'Resolution not supported: {width}x{height}')
-                logger.critical('Please set emulator resolution to 1280x720')
+                logger.critical('Please set emulator resolution to 1280x720, '
+                                'or a larger 16:9 resolution such as 1920x1080 or 2560x1440')
                 raise RequestHumanTakeover
 
     def check_screen_black(self):

@@ -12,6 +12,7 @@ from module.base.timer import Timer
 from module.device.method.uiautomator_2 import ProcessInfo, Uiautomator2
 from module.device.method.utils import (
     ImageTruncated, PackageNotInstalled, RETRY_TRIES, handle_adb_error, handle_unknown_host_service, retry_sleep)
+from module.device.resolution import CANVAS_HEIGHT, CANVAS_WIDTH
 from module.exception import RequestHumanTakeover
 from module.logger import logger
 
@@ -120,31 +121,35 @@ class DroidCast(Uiautomator2):
         To get PNG screenshots.
     """
 
-    def droidcast_url(self, url='/preview'):
+    def droidcast_request_size(self):
+        """
+        Returns:
+            tuple[int, int]: (width, height) to request from DroidCast,
+                or None to receive frames at its default size.
+        """
         if self.is_mumu_over_version_356:
             w, h = self.droidcast_width, self.droidcast_height
             if self.orientation == 0:
-                return f'http://127.0.0.1:{self._droidcast_port}{url}?width={w}&height={h}'
+                return w, h
             elif self.orientation == 1:
-                return f'http://127.0.0.1:{self._droidcast_port}{url}?width={h}&height={w}'
+                return h, w
             else:
                 # logger.warning('DroidCast receives invalid device orientation')
-                pass
+                return None
+        if self.display_scale != 1 and self.orientation == 0:
+            # DroidCast scales on the device, far cheaper than transferring full-size frames
+            return CANVAS_WIDTH, CANVAS_HEIGHT
+        return None
+
+    def droidcast_url(self, url='/preview'):
+        size = self.droidcast_request_size()
+        if size is not None:
+            return f'http://127.0.0.1:{self._droidcast_port}{url}?width={size[0]}&height={size[1]}'
 
         return f'http://127.0.0.1:{self._droidcast_port}{url}'
 
     def droidcast_raw_url(self, url='/screenshot'):
-        if self.is_mumu_over_version_356:
-            w, h = self.droidcast_width, self.droidcast_height
-            if self.orientation == 0:
-                return f'http://127.0.0.1:{self._droidcast_port}{url}?width={w}&height={h}'
-            elif self.orientation == 1:
-                return f'http://127.0.0.1:{self._droidcast_port}{url}?width={h}&height={w}'
-            else:
-                # logger.warning('DroidCast receives invalid device orientation')
-                pass
-
-        return f'http://127.0.0.1:{self._droidcast_port}{url}'
+        return self.droidcast_url(url)
 
     def droidcast_init(self):
         logger.hr('DroidCast init')

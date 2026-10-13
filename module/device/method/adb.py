@@ -13,6 +13,7 @@ from module.device.connection import Connection
 from module.device.method.remove_warning import remove_screenshot_warning
 from module.device.method.utils import (ImageTruncated, PackageNotInstalled, RETRY_TRIES, handle_adb_error,
                                         handle_unknown_host_service, retry_sleep)
+from module.device.resolution import hierarchy_to_canvas
 from module.exception import RequestHumanTakeover, ScriptError
 from module.logger import logger
 
@@ -182,6 +183,7 @@ class Adb(Connection):
     @retry
     def click_adb(self, x, y):
         start = time.time()
+        x, y = self.canvas_to_device(x, y)
         self.adb_shell(['input', 'tap', x, y])
         if time.time() - start <= 0.05:
             self.sleep(0.05)
@@ -189,6 +191,7 @@ class Adb(Connection):
     @retry
     def swipe_adb(self, p1, p2, duration=0.1):
         duration = int(duration * 1000)
+        p1, p2 = self.canvas_to_device(*p1), self.canvas_to_device(*p2)
         self.adb_shell(['input', 'swipe', *p1, *p2, duration])
 
     @retry
@@ -423,4 +426,4 @@ class Adb(Connection):
 
         # Parse with lxml
         hierarchy = etree.fromstring(content)
-        return hierarchy
+        return hierarchy_to_canvas(hierarchy, self.display_scale)

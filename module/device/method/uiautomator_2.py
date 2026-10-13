@@ -14,6 +14,7 @@ from module.config.server import DICT_PACKAGE_TO_ACTIVITY
 from module.device.connection import Connection
 from module.device.method.utils import (ImageTruncated, PackageNotInstalled, RETRY_TRIES, handle_adb_error,
                                         handle_unknown_host_service, possible_reasons, retry_sleep)
+from module.device.resolution import canvas_scale, hierarchy_to_canvas
 from module.exception import RequestHumanTakeover
 from module.logger import logger
 
@@ -136,14 +137,17 @@ class Uiautomator2(Connection):
 
     @retry
     def click_uiautomator2(self, x, y):
+        x, y = self.canvas_to_device(x, y)
         self.u2.click(x, y)
 
     @retry
     def long_click_uiautomator2(self, x, y, duration=(1, 1.2)):
+        x, y = self.canvas_to_device(x, y)
         self.u2.long_click(x, y, duration=duration)
 
     @retry
     def swipe_uiautomator2(self, p1, p2, duration=0.1):
+        p1, p2 = self.canvas_to_device(*p1), self.canvas_to_device(*p2)
         self.u2.swipe(*p1, *p2, duration=duration)
 
     @retry
@@ -175,14 +179,15 @@ class Uiautomator2(Connection):
         length = len(path)
         for index, data in enumerate(path):
             x, y, second = data
+            device_point = self.canvas_to_device(x, y)
             if index == 0:
-                self.u2.touch.down(x, y)
+                self.u2.touch.down(*device_point)
                 logger.info(point2str(x, y) + ' down')
             elif index - length == -1:
-                self.u2.touch.up(x, y)
+                self.u2.touch.up(*device_point)
                 logger.info(point2str(x, y) + ' up')
             else:
-                self.u2.touch.move(x, y)
+                self.u2.touch.move(*device_point)
                 logger.info(point2str(x, y) + ' move')
             self.sleep(second)
 
@@ -388,7 +393,7 @@ class Uiautomator2(Connection):
         content = self.u2.dump_hierarchy(compressed=False)
         # print(content)
         hierarchy = etree.fromstring(content.encode('utf-8'))
-        return hierarchy
+        return hierarchy_to_canvas(hierarchy, self.display_scale)
 
     def uninstall_uiautomator2(self):
         logger.info('Removing uiautomator2')
@@ -426,17 +431,16 @@ class Uiautomator2(Connection):
             (width, height)
 
         Raises:
-            RequestHumanTakeover: If resolution is not 1280x720
+            RequestHumanTakeover: If resolution is not 1280x720 or a multiple of it
         """
         width, height = self.resolution_uiautomator2()
         logger.attr('Screen_size', f'{width}x{height}')
-        if width == 1280 and height == 720:
-            return (width, height)
-        if width == 720 and height == 1280:
+        if canvas_scale(width, height) is not None:
             return (width, height)
 
         logger.critical(f'Resolution not supported: {width}x{height}')
-        logger.critical('Please set emulator resolution to 1280x720')
+        logger.critical('Please set emulator resolution to 1280x720, '
+                        'or a larger 16:9 resolution such as 1920x1080 or 2560x1440')
         raise RequestHumanTakeover
 
     @retry
