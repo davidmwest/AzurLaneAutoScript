@@ -255,3 +255,7 @@ console.bat
 
 # Pylance configuration file
 pyrightconfig.json
+# Created to pause the scheduler, see AzurLaneAutoScript.wait_while_paused
+config/*.pause
+# Icons the event shop scan could not name, saved for making templates
+assets/shop/event/new_templates/
