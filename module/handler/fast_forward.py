@@ -384,8 +384,10 @@ class FastForwardHandler(AutoSearchHandler):
         stage_increase = [r for r in self.STAGE_INCREASE]
         # Insert custom increase logic
         if self.config.STAGE_INCREASE_AB:
+            # Hard mode has the same two parts, C for A and D for B
             stage_increase = [
-                'A1 > A2 > A3 > B1 > B2 > B3',                
+                'A1 > A2 > A3 > B1 > B2 > B3',
+                'C1 > C2 > C3 > D1 > D2 > D3',
             ] + stage_increase
         custom = self.config.STAGE_INCREASE_CUSTOM
         if custom:
