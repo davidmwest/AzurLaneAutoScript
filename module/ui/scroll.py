@@ -8,6 +8,25 @@ from module.base.utils import color_similarity_2d, random_rectangle_point, rgb2g
 from module.logger import logger
 
 
+def best_interval(score):
+    """
+    Find the continuous interval with the highest total score.
+
+    Args:
+        score (np.ndarray): Shape (n,), positive where the thing to find is likely.
+
+    Returns:
+        tuple[int, int]: Start and end of the interval, end not included.
+            (0, 0) if no interval has a positive total.
+    """
+    total = np.concatenate(([0.], np.cumsum(score, dtype=np.float64)))
+    end = int(np.argmax(total - np.minimum.accumulate(total)))
+    start = int(np.argmin(total[:end + 1]))
+    if total[end] <= total[start]:
+        return 0, 0
+    return start, end
+
+
 class Scroll:
     color_threshold = 221
     drag_threshold = 0.05

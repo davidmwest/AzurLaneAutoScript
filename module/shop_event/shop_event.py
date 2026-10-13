@@ -264,6 +264,7 @@ class EventShop(EventShopClerk):
             else:
                 self.ui_click(NAV_EVENT, check_button=NAV_EVENT, appear_button=NAV_GENERAL)
 
+        self.event_shop_load_ensure()
         count, navbar = self.event_shop_tab_count_and_navbar
         logger.info(f"Detected {count} event shop(s). Start processing.")
         for i in range(count):

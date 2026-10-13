@@ -202,6 +202,26 @@ class AlOcr(CnOcr):
         img = np.expand_dims(img, 0).astype('float32') / 255.0
         return img
 
+    def _pad_arrays(self, img_list, background=1.0):
+        """
+        Padding to make sure all the elements have the same width.
+
+        cnocr pads with 0, which is black, but the images here have dark letters on a white background.
+        The black block after a short text changes how the text is read, "10/10" came back as "10/0"
+        when it shared a batch with a longer text. Pad with the background instead.
+
+        :param img_list: list of np.ndarray, each with shape (1, height, width)
+        :param background: value of a background pixel
+        :return: padded images, and their widths before padding
+        """
+        img_widths = [img.shape[2] for img in img_list]
+        max_width = max(img_widths)
+        img_list = [
+            np.pad(img, [(0, 0), (0, 0), (0, max_width - img.shape[2])], 'constant', constant_values=background)
+            for img in img_list
+        ]
+        return img_list, img_widths
+
     def _gen_line_pred_chars(self, line_prob, img_width, max_img_width):
         """
         Get the predicted characters.
@@ -232,6 +252,6 @@ class AlOcr(CnOcr):
         """
         self.init(*self._args)
         img_list = [(self._preprocess_img_array(img) * 255.0).astype(np.uint8) for img in img_list]
-        img_list, img_widths = self._pad_arrays(img_list)
+        img_list, img_widths = self._pad_arrays(img_list, background=255)
         image = cv2.hconcat(img_list)[0, :, :]
         Image.fromarray(image).show()

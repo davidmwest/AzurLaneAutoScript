@@ -39,15 +39,34 @@ OCR_EVENT_SHOP_PT = Digit(SHOP_OCR_BALANCE, letter=(100, 100, 100), name='OCR_EV
 OCR_EVENT_SHOP_URPT = Digit(SHOP_OCR_BALANCE_SECOND, letter=(100, 100, 100), name='OCR_EVENT_SHOP_URPT')
 
 
+EVENT_SHOP_TAB_AREA = (206, 92, 1092, 134)
+EVENT_SHOP_TAB_GAP = 33
+
+
 class EventShopUI(UI):
-    @cached_property
-    def event_shop_tab_count_and_navbar(self):
-        gap_x = 33
-        area = (206, 92, 1092, 134)
+    def event_shop_tab_count(self):
+        """
+        Returns:
+            int: Number of tabs in the event shop, from the width of the active tab.
+        """
+        area, gap_x = EVENT_SHOP_TAB_AREA, EVENT_SHOP_TAB_GAP
         image = crop(self.device.image, area)
         tab = color_similarity_2d(image, color=(232, 238, 240))
         index = np.where(np.average(tab > 221, axis=0) > 0.5)[0]
-        count = (area[2] - area[0] + gap_x) // (len(index) + gap_x)
+        return (area[2] - area[0] + gap_x) // (len(index) + gap_x)
+
+    @cached_property
+    def event_shop_tab_count_and_navbar(self):
+        area, gap_x = EVENT_SHOP_TAB_AREA, EVENT_SHOP_TAB_GAP
+        # The tabs fade in when the shop opens, and a tab that is not fully shown yet looks narrower,
+        # like one of several. So wait until two screenshots in a row give the same count.
+        count = 0
+        for _ in self.loop(timeout=3):
+            previous, count = count, self.event_shop_tab_count()
+            if count == previous:
+                break
+        else:
+            logger.warning('Event shop tab count is not stable, using the last one')
         logger.info(f"Event shop tab count: {count}")
         delta_x = (area[2] - area[0] + gap_x) // count - gap_x
         grid = ButtonGrid((206, 92), (delta_x + gap_x, 44),

@@ -20,6 +20,8 @@ DELTA_PRICE = (28, 164, 128, 193)
 DELTA_TAG = (108, 30, 155, 52)
 COUNTER_COLOR = (106, 120, 131)
 COUNTER_THRESHOLD = 150
+# Letter thresholds to read a counter at, a higher threshold makes the letters bolder
+COUNTER_LETTER_THRESHOLDS = (128, 160, 192)
 COUNTER_TOTALS = (500, 350, 100, 50, 40, 30, 20, 15, 10, 5, 4, 2, 1)
 PRICE_THRESHOLD = 230
 PRICE_BACKGROUND_COLOR = (61, 78, 91)
@@ -67,6 +69,18 @@ class CounterOcr(Ocr):
         return result
 
     @staticmethod
+    def is_counter(result):
+        """
+        Returns:
+            bool: If result is a counter like `14/15`.
+        """
+        parts = result.split('/') if result else []
+        if len(parts) != 2 or not all(part.isdigit() for part in parts):
+            return False
+        current, total = [int(part) for part in parts]
+        return 0 < total and current <= total
+
+    @staticmethod
     def parse_result(result):
         parts = result.split('/') if result else []
         if len(parts) != 2 or not all(part.isdigit() for part in parts):
@@ -79,9 +93,28 @@ class CounterOcr(Ocr):
             return [0, 0]
         return [current, total]
 
+    @classmethod
+    def vote(cls, readings):
+        """
+        Args:
+            readings (list[str]): The same counter read in different ways.
+
+        Returns:
+            str: The counter most readings agree on, the earlier reading on a tie.
+                The first reading if none of them is a counter.
+        """
+        counters = [reading for reading in readings if cls.is_counter(reading)]
+        if not counters:
+            return readings[0]
+        return max(counters, key=counters.count)
+
     def ocr(self, image, direct_ocr=False):
         """
         Do OCR on a counter, such as `14/15`, and returns 14, 15
+
+        The model drops a thin digit next to the slash every now and then, "10/10" comes back as "10/0"
+        or "100/100" as "00/100", and which counters it happens to depends on how bold the letters are.
+        So each counter is read at several letter thresholds and the reading most of them agree on is taken.
 
         Args:
             image:
@@ -90,10 +123,18 @@ class CounterOcr(Ocr):
         Returns:
             list[list[int]: [[current, total]].
         """
-        result_list = super().ocr(image, direct_ocr=direct_ocr)
-        if isinstance(result_list, list):
-            return [self.parse_result(result) for result in result_list]
-        return self.parse_result(result_list)
+        threshold = self.threshold
+        readings = []
+        try:
+            for letter_threshold in COUNTER_LETTER_THRESHOLDS:
+                self.threshold = letter_threshold
+                readings.append(super().ocr(image, direct_ocr=direct_ocr))
+        finally:
+            self.threshold = threshold
+
+        if isinstance(readings[0], list):
+            return [self.parse_result(self.vote(list(texts))) for texts in zip(*readings)]
+        return self.parse_result(self.vote(readings))
 
 
 class PriceOcr(Digit):

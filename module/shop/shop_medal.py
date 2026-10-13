@@ -14,11 +14,23 @@ from module.shop.assets import *
 from module.shop.base import ShopItemGrid_250814
 from module.shop.clerk import ShopClerk
 from module.shop.shop_status import ShopStatus
-from module.ui.scroll import Scroll
+from module.ui.scroll import Scroll, best_interval
 
 
 class ShopScroll(Scroll):
     def match_color(self, main):
+        """
+        The scroll is translucent, so what it looks like depends on the page behind it.
+        Where the page is about as dark as the scroll itself, a row of the button can not be told
+        from a row of the background, and taking every row on its own finds pieces of button all over.
+        The button is one piece, so take the continuous stretch of rows that looks most like it.
+
+        Args:
+            main (ModuleBase):
+
+        Returns:
+            np.ndarray: Shape (n,), dtype bool.
+        """
         background_transparency = 0.2
         button_transparency = 0.5
         delta_x = 3
@@ -35,7 +47,9 @@ class ShopScroll(Scroll):
         button_mask = button_transparency * np.array(self.color) + (1 - button_transparency) * baseline_color
         err_background = np.sum((masked_color - background_mask) ** 2, axis=1)
         err_button = np.sum((masked_color - button_mask) ** 2, axis=1)
-        mask = err_button < err_background
+        start, end = best_interval(err_background - err_button)
+        mask = np.zeros(err_button.shape, dtype=np.bool_)
+        mask[start:end] = True
         self.length = np.sum(mask)
         return mask
 

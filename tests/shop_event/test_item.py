@@ -1,7 +1,11 @@
 """Tests for CounterOcr.after_process in module.shop_event.item."""
+import os
+
+import cv2
 import pytest
 
 from module.ocr.ocr import Ocr
+from module.shop_event import item
 from module.shop_event.item import CounterOcr, EventShopItem
 
 AMBIGUOUS_SLASHLESS_COUNTERS = {'15', '015', '350', '0350', '1350', '2350', '3350', '4350'}
@@ -120,6 +124,41 @@ class TestCounterOcrAfterProcess:
         monkeypatch.setattr(Ocr, 'ocr', lambda *args, **kwargs: ['/', '500/500'])
 
         assert self.ocr.ocr([None, None], direct_ocr=True) == [[0, 0], [500, 500]]
+
+
+@pytest.mark.parametrize('readings, expected', [
+    # The reading most agree on
+    (['10/0', '10/10', '10/10'], '10/10'),
+    (['100/100', '00/100', '100/100'], '100/100'),
+    # Readings that are not a counter have no vote
+    (['10/0', '500/50', '10/10'], '10/10'),
+    (['1/1', '1/1', '/1'], '1/1'),
+    # The earlier reading on a tie
+    (['4/10', '4/1', ''], '4/10'),
+    # Nothing to choose from
+    (['10/0', '', '/'], '10/0'),
+])
+def test_counter_vote(readings, expected):
+    assert CounterOcr.vote(readings) == expected
+
+
+def test_reads_the_stock_counters_of_a_shop_screen(monkeypatch):
+    """
+    ./data/counters.png is the "Limit:10/10" line of the 10 items on a screenshot of the EN client,
+    one above the other. "10/10" of the 8th item used to come back as "10/0".
+    """
+    image = cv2.cvtColor(cv2.imread(os.path.join(os.path.dirname(__file__), 'data', 'counters.png')),
+                         cv2.COLOR_BGR2RGB)
+    counters = [image[y:y + 16] for y in range(0, image.shape[0], 16)]
+    # Width of "Limit:" on the EN client
+    monkeypatch.setattr(item, 'COUNTER_LEFT_STRIP', 42)
+    ocr = CounterOcr([], letter=item.COUNTER_COLOR, name='Test_counter_ocr')
+
+    assert ocr.ocr(counters, direct_ocr=True) == [
+        [10, 10], [1, 1], [1, 1], [350, 350], [500, 500],
+        [1, 1], [5, 5], [10, 10], [4, 10], [5, 5],
+    ]
+    assert ocr.threshold == 128
 
 
 def test_price_135_total_15_is_equip_ssr():
