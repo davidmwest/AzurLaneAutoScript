@@ -11,7 +11,7 @@ from module.shop.assets import AMOUNT_PLUS, AMOUNT_MINUS, AMOUNT_MAX, SHOP_BUY_C
     SHOP_CLICK_SAFE_AREA
 from module.shop.clerk import OCR_SHOP_AMOUNT
 from module.shop_event.assets import *
-from module.shop_event.item import ITEM_SHAPE, EventShopItemGrid, DELTA_PRICE_BACKGROUND, DELTA_ITEM, \
+from module.shop_event.item import ITEM_SHAPE, EventShopItemGrid, DELTA_PRICE_BACKGROUND, DELTA_ITEM, GRID_SHAPE, \
     PRICE_BACKGROUND_COLOR, PRICE_THRESHOLD
 from module.shop_event.ui import EventShopUI, EVENT_SHOP_SCROLL
 from module.ui_white.assets import BACK_ARROW_WHITE
@@ -99,14 +99,19 @@ class EventShopClerk(EventShopUI):
             return []
 
     @staticmethod
-    def merge_scanned_rows(rows, new_items):
+    def merge_scanned_rows(rows, new_items, scroll_pixels=None):
         """
         Add the items of a screen to what has been scanned so far.
         The rows at the top of a screen are usually the last rows of the screen before.
 
+        A row is the same row if it has the same prices and stocks, and if it is where the scrolling
+        since should have put it. Names are left out, the same icon is not matched to the same name every time.
+
         Args:
             rows (list[list[EventShopItem]]): Rows of items scanned so far, top to bottom.
             new_items (list[EventShopItem]): Items on the current screen.
+            scroll_pixels (int | float): How far the items move while the scroll goes from top to bottom.
+                None to go by prices and stocks only.
 
         Returns:
             list[list[EventShopItem]]:
@@ -116,15 +121,36 @@ class EventShopClerk(EventShopUI):
             new_rows.setdefault(item.button[1], []).append(item)
         new_rows = [new_rows[y] for y in sorted(new_rows)]
 
-        def content(scanned):
-            return [[(item.name, item.price, item.count, item.total_count) for item in row] for row in scanned]
+        def same(old_row, new_row):
+            if [(item.price, item.count, item.total_count) for item in old_row] \
+                    != [(item.price, item.count, item.total_count) for item in new_row]:
+                return False
+            old, new = old_row[0], new_row[0]
+            if scroll_pixels is None or old.scroll_pos is None or new.scroll_pos is None:
+                return True
+            moved_to = old.button[1] - (new.scroll_pos - old.scroll_pos) * scroll_pixels
+            return abs(new.button[1] - moved_to) < GRID_SHAPE[1] / 2
 
         for seen in range(min(len(rows), len(new_rows)), 0, -1):
-            if content(rows[-seen:]) == content(new_rows[:seen]):
+            if all(same(old, new) for old, new in zip(rows[-seen:], new_rows[:seen])):
                 logger.info('Ignore duplicated items')
                 new_rows = new_rows[seen:]
                 break
         return rows + new_rows
+
+    @staticmethod
+    def event_shop_scroll_pixels():
+        """
+        The button of the scroll is as long, compared to the scroll, as the part of the items that is shown.
+
+        Returns:
+            float | None: How far the items move while the scroll goes from top to bottom.
+                None if the length of the button is not known.
+        """
+        button, total = EVENT_SHOP_SCROLL.length, EVENT_SHOP_SCROLL.total
+        if not 0 < button < total:
+            return None
+        return (DETECT_AREA[3] - DETECT_AREA[1]) * (total - button) / button
 
     def scan_all(self):
         rows = []
@@ -138,7 +164,7 @@ class EventShopClerk(EventShopUI):
             # Swipes of a scan going well are not a button clicked over and over
             self.device.click_record_clear()
             new_items = self.event_shop_get_items(scroll_pos=EVENT_SHOP_SCROLL.cal_position(main=self))
-            rows = self.merge_scanned_rows(rows, new_items)
+            rows = self.merge_scanned_rows(rows, new_items, scroll_pixels=self.event_shop_scroll_pixels())
             if at_end:
                 logger.info('Event shop reach bottom')
                 break

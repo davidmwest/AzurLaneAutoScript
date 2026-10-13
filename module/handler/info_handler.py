@@ -519,25 +519,45 @@ class InfoHandler(ModuleBase):
     Game tips
     """
 
+    # How long game tips have been on screen
+    _game_tips_seen = None
+
+    def is_game_tips(self):
+        """
+        Returns:
+            bool: If the current screenshot looks like game tips.
+        """
+        for button in [GAME_TIPS, GAME_TIPS3, GAME_TIPS4]:
+            if self.appear(button, offset=(20, 20)) and self.image_color_count(
+                    button.button, color=(40, 40, 40), threshold=15, count=50):
+                return True
+        return False
+
     def handle_game_tips(self):
         """
+        Game tips are told by the number of their page, and closed with a button that lies where
+        the UNLOCK button of a ship is. While the details of a ship slide in, a skill at "LEVEL: 10"
+        has been taken for that page number, and the click that followed asked to unlock the ship.
+        Game tips stay until they are closed, so only close what has been there for a moment.
+
         Returns:
             bool: If handled
         """
-        if self.appear(GAME_TIPS, offset=(20, 20), interval=2) and self.image_color_count(
-                GAME_TIPS.button, color=(40, 40, 40), threshold=15, count=50):
-            self.device.click(GAME_TIPS)
-            return True
-        if self.appear(GAME_TIPS3, offset=(20, 20), interval=2) and self.image_color_count(
-                GAME_TIPS3.button, color=(40, 40, 40), threshold=15, count=50):
-            self.device.click(GAME_TIPS)
-            return True
-        if self.appear(GAME_TIPS4, offset=(20, 20), interval=2) and self.image_color_count(
-                GAME_TIPS4.button, color=(40, 40, 40), threshold=15, count=50):
-            self.device.click(GAME_TIPS)
-            return True
+        if self._game_tips_seen is None:
+            self._game_tips_seen = Timer(1, count=2)
 
-        return False
+        if not self.is_game_tips():
+            self._game_tips_seen.clear()
+            return False
+        if not self._game_tips_seen.started():
+            self._game_tips_seen.start()
+            return False
+        if not self._game_tips_seen.reached():
+            return False
+
+        self.device.click(GAME_TIPS)
+        self._game_tips_seen.clear()
+        return True
 
     """
     Manjuu loading

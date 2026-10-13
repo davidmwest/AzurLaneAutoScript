@@ -33,8 +33,9 @@ def make_clerk(counter_results):
     return clerk, scanner
 
 
-def make_item(name, y, count=1):
-    return SimpleNamespace(name=name, price=100, count=count, total_count=5, button=(0, y, 1, y + 1))
+def make_item(name, y, count=1, scroll_pos=None):
+    return SimpleNamespace(name=name, price=100, count=count, total_count=5, button=(0, y, 1, y + 1),
+                           scroll_pos=scroll_pos)
 
 
 def names(rows):
@@ -48,8 +49,8 @@ def test_merge_first_screen_into_rows():
 
 
 def test_merge_ignores_rows_already_scanned():
-    rows = [[make_item('a', 239)], [make_item('b', 463)]]
-    screen = [make_item('b', 300), make_item('c', 524)]
+    rows = [[make_item('a', 239, count=5)], [make_item('b', 463, count=4)]]
+    screen = [make_item('b', 300, count=4), make_item('c', 524, count=3)]
 
     assert names(EventShopClerk.merge_scanned_rows(rows, screen)) == [['a'], ['b'], ['c']]
 
@@ -69,10 +70,44 @@ def test_merge_keeps_a_row_that_only_looks_alike():
 
 
 def test_merge_rows_from_different_screens_at_the_same_height_stay_apart():
-    rows = [[make_item('a', 300)], [make_item('b', 300)]]
-    screen = [make_item('b', 300), make_item('c', 524)]
+    rows = [[make_item('a', 300, count=5)], [make_item('b', 300, count=4)]]
+    screen = [make_item('b', 300, count=4), make_item('c', 524, count=3)]
 
     assert names(EventShopClerk.merge_scanned_rows(rows, screen)) == [['a'], ['b'], ['c']]
+
+
+def test_merge_knows_a_row_by_prices_and_stocks_not_by_name():
+    # The icon of the same item was matched to another name on the next screen
+    rows = [[make_item('PlateGeneralT3', 463)]]
+    screen = [make_item('PlateGunT3', 332)]
+
+    assert names(EventShopClerk.merge_scanned_rows(rows, screen)) == [['PlateGeneralT3']]
+
+
+def test_merge_tells_rows_with_the_same_prices_and_stocks_apart_by_where_they_are():
+    # 1000 pixels from top to bottom, a row is 224 pixels below the row before
+    rows = [[make_item('a', 463, scroll_pos=0.2)]]
+
+    # Scrolled 100 pixels and the row is 100 pixels higher: the same row
+    screen = [make_item('a', 363, scroll_pos=0.3)]
+    assert names(EventShopClerk.merge_scanned_rows(rows, screen, scroll_pixels=1000)) == [['a']]
+
+    # Scrolled 100 pixels and a row is 124 pixels lower: the next row
+    screen = [make_item('b', 587, scroll_pos=0.3)]
+    assert names(EventShopClerk.merge_scanned_rows(rows, screen, scroll_pixels=1000)) == [['a'], ['b']]
+
+    # The position is not known that well, the same row a bit off from where it should be
+    screen = [make_item('a', 303, scroll_pos=0.3)]
+    assert names(EventShopClerk.merge_scanned_rows(rows, screen, scroll_pixels=1000)) == [['a']]
+
+
+def test_scroll_pixels_from_the_length_of_the_scroll_button(monkeypatch):
+    monkeypatch.setattr(clerk, 'EVENT_SHOP_SCROLL', SimpleNamespace(length=119, total=422))
+    # 438 pixels of items are shown, 119 rows of 422
+    assert EventShopClerk.event_shop_scroll_pixels() == pytest.approx(438 * 303 / 119)
+
+    monkeypatch.setattr(clerk, 'EVENT_SHOP_SCROLL', SimpleNamespace(length=0, total=422))
+    assert EventShopClerk.event_shop_scroll_pixels() is None
 
 
 class Shop:
@@ -88,6 +123,7 @@ class Shop:
         self.button_length = 119
         self.device = SimpleNamespace(click_record_clear=Mock())
         self.merge_scanned_rows = EventShopClerk.merge_scanned_rows
+        self.event_shop_scroll_pixels = lambda: None
 
     def event_shop_get_items(self, scroll_pos=None):
         return self.screens[self.shown]
@@ -112,11 +148,11 @@ class Shop:
 
 def test_scan_all_reads_every_row_once(monkeypatch):
     shop = Shop([
-        [make_item('a', 239), make_item('b', 463)],
-        [make_item('b', 332)],
-        [make_item('c', 425)],
+        [make_item('a', 239, count=5), make_item('b', 463, count=4)],
+        [make_item('b', 332, count=4)],
+        [make_item('c', 425, count=3)],
         # The last row is only shown at the very end
-        [make_item('c', 248), make_item('d', 471)],
+        [make_item('c', 248, count=3), make_item('d', 471, count=2)],
     ])
     monkeypatch.setattr(clerk, 'EVENT_SHOP_SCROLL', shop)
 
