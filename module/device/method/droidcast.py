@@ -17,6 +17,11 @@ from module.exception import RequestHumanTakeover
 from module.logger import logger
 
 
+# (connect, read) in seconds. A screenshot can take several seconds while the game is loading a battle,
+# and restarting DroidCast at that moment takes longer than waiting for it.
+SCREENSHOT_TIMEOUT = (3, 10)
+
+
 class DroidCastVersionIncompatible(Exception):
     pass
 
@@ -201,7 +206,7 @@ class DroidCast(Uiautomator2):
             if not self.droidcast_width or not self.droidcast_height:
                 self._droidcast_update_resolution()
 
-        resp = self.droidcast_session.get(self.droidcast_url(), timeout=3)
+        resp = self.droidcast_session.get(self.droidcast_url(), timeout=SCREENSHOT_TIMEOUT)
 
         if resp.status_code == 404:
             raise DroidCastVersionIncompatible('DroidCast server does not have /preview')
@@ -240,7 +245,7 @@ class DroidCast(Uiautomator2):
 
         rotate = self.is_mumu_over_version_356 and self.orientation == 1
 
-        image = self.droidcast_session.get(self.droidcast_raw_url(), timeout=3).content
+        image = self.droidcast_session.get(self.droidcast_raw_url(), timeout=SCREENSHOT_TIMEOUT).content
         # DroidCast_raw returns a RGB565 bitmap
 
         try:
