@@ -489,6 +489,20 @@ Awaken:
     option: [ level120, level125 ]
   Favourite:
     value: false
+  ChipReserve: 0
+  Order:
+    value: highest_level_first
+    option: [ highest_level_first, lowest_level_first ]
+  Index:
+    value: all
+    option: [ all, vanguard, main, dd, cl, ca, bb, cv, repair, ss, others ]
+  Faction:
+    value: all
+    option: [ all, eagle, royal, sakura, iron, dragon, sardegna, northern, iris, vichya, tulipa, pedreria, meta, tempesta, other ]
+  Rarity:
+    value: all
+    option: [ all, common, rare, elite, super_rare, ultra ]
+  CheckInterval: 0
 GeneralShop:
   UseGems: false
   Refresh: false

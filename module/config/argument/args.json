@@ -7707,6 +7707,72 @@
       "Favourite": {
         "type": "checkbox",
         "value": false
+      },
+      "ChipReserve": {
+        "type": "input",
+        "value": 0
+      },
+      "Order": {
+        "type": "select",
+        "value": "highest_level_first",
+        "option": [
+          "highest_level_first",
+          "lowest_level_first"
+        ]
+      },
+      "Index": {
+        "type": "select",
+        "value": "all",
+        "option": [
+          "all",
+          "vanguard",
+          "main",
+          "dd",
+          "cl",
+          "ca",
+          "bb",
+          "cv",
+          "repair",
+          "ss",
+          "others"
+        ]
+      },
+      "Faction": {
+        "type": "select",
+        "value": "all",
+        "option": [
+          "all",
+          "eagle",
+          "royal",
+          "sakura",
+          "iron",
+          "dragon",
+          "sardegna",
+          "northern",
+          "iris",
+          "vichya",
+          "tulipa",
+          "pedreria",
+          "meta",
+          "tempesta",
+          "other"
+        ]
+      },
+      "Rarity": {
+        "type": "select",
+        "value": "all",
+        "option": [
+          "all",
+          "common",
+          "rare",
+          "elite",
+          "super_rare",
+          "ultra"
+        ]
+      },
+      "CheckInterval": {
+        "type": "input",
+        "value": 0
       }
     },
     "Storage": {

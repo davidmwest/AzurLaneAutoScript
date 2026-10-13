@@ -3,9 +3,13 @@ from module.base.timer import Timer
 from module.exception import ScriptError
 from module.logger import logger
 from module.ocr.ocr import Digit
-from module.retire.dock import DOCK_EMPTY, Dock
+from module.retire.assets import DOCK_CHECK, SHIP_DETAIL_CHECK
+from module.retire.dock import CARD_GRIDS, DOCK_EMPTY, Dock
 from module.ui.assets import BACK_ARROW
 from module.ui.page import page_dock, page_main
+
+# Guard against awakening the same ship over and over, should it stay in dock after an awakening failed
+AWAKEN_SHIPS_PER_RUN = 60
 
 
 class ShipLevel(Digit):
@@ -83,6 +87,43 @@ class Awaken(Dock):
         logger.warning('Invalid awaken cost')
         return 'invalid'
 
+    def _get_chip_amount(self):
+        """
+        Read the numbers below the cognitive chip, like "2389/240".
+        Call this after _get_awaken_cost(), which finds where the chip is.
+
+        Returns:
+            tuple[int, int]: Cognitive chips owned, cognitive chips this awakening costs.
+
+        Pages:
+            in: Awaken popup, with enough chips. What is owned is written in green then, in red otherwise.
+        """
+        x1, y1, x2, y2 = COST_CHIP.button
+        area = (x1 - 14, y2 + 12, x2 + 14, y2 + 34)
+        owned = Digit(area, letter=(165, 236, 75), threshold=128, name='AwakenChipOwned')
+        cost = Digit(area, letter=(255, 255, 255), threshold=128, name='AwakenChipCost')
+        return owned.ocr(self.device.image), cost.ocr(self.device.image)
+
+    def is_chip_reserve_kept(self):
+        """
+        Returns:
+            bool: If this awakening leaves at least Awaken_ChipReserve cognitive chips.
+                False also if the numbers can not be read, chips are not spent on a guess.
+
+        Pages:
+            in: Awaken popup, with enough chips
+        """
+        reserve = self.config.Awaken_ChipReserve
+        if reserve <= 0:
+            return True
+
+        owned, cost = self._get_chip_amount()
+        if cost <= 0 or owned < cost:
+            logger.warning(f'Unexpected cognitive chips: owned={owned}, cost={cost}')
+            return False
+        logger.attr('AwakenChip', f'{owned} - {cost} = {owned - cost}, reserve {reserve}')
+        return owned - cost >= reserve
+
     def handle_awaken_finish(self):
         return self.appear_then_click(AWAKEN_FINISH, offset=(20, 20), interval=1)
 
@@ -112,7 +153,7 @@ class Awaken(Dock):
             skip_first_screenshot:
 
         Returns:
-            str: Result state, 'no_exp', 'unexpected_array', 'insufficient', 'timeout', 'success'
+            str: Result state, 'no_exp', 'unexpected_array', 'insufficient', 'reserve', 'timeout', 'success'
 
         Pages:
             in: is_in_awaken
@@ -169,6 +210,11 @@ class Awaken(Dock):
                 return 'timeout'
 
         # sufficient is True
+        if not self.is_chip_reserve_kept():
+            logger.info('Awakening would leave less cognitive chips than the reserve')
+            self.awaken_popup_close()
+            return 'reserve'
+
         logger.info('Awaken confirm')
         self.interval_clear(AWAKEN_CONFIRM)
         # Awaken popup takes 10s to appear if you have enough EXP to reach next awaken limit
@@ -237,7 +283,7 @@ class Awaken(Dock):
             skip_first_screenshot:
 
         Returns:
-            str: 'level_max', 'insufficient', 'no_exp', 'timeout'
+            str: 'level_max', 'insufficient', 'reserve', 'no_exp', 'timeout'
 
         Pages:
             in: is_in_awaken
@@ -265,7 +311,7 @@ class Awaken(Dock):
                     # 'no_exp', 'unexpected_array', 'insufficient', 'timeout', 'success'
                     if result == 'success':
                         continue
-                    if result in ['insufficient', 'no_exp']:
+                    if result in ['insufficient', 'reserve', 'no_exp']:
                         # Return as it is
                         return result
                     if result == 'unexpected_array':
@@ -332,14 +378,23 @@ class Awaken(Dock):
         logger.hr('Awaken run', level=1)
         self.ui_ensure(page_dock)
         self.dock_favourite_set(enable=favourite, wait_loading=False)
-        self.dock_sort_method_dsc_set(wait_loading=False)
+        # Sorted by level, so this is also from the most expensive awakening to the cheapest, or the other way
+        self.dock_sort_method_dsc_set(self.config.Awaken_Order == 'highest_level_first', wait_loading=False)
         if use_array:
             extra = ['can_awaken_plus']
         else:
             extra = ['can_awaken']
-        self.dock_filter_set(extra=extra)
+        self.dock_filter_set(
+            index=self.config.Awaken_Index,
+            faction=self.config.Awaken_Faction,
+            rarity=self.config.Awaken_Rarity,
+            extra=extra,
+        )
 
-        while 1:
+        # Ships passed over to keep the chip reserve. They stay in dock, in front of the ships not tried yet.
+        skipped = 0
+        result = 'finish'
+        for _ in range(AWAKEN_SHIPS_PER_RUN):
             # page_dock
             if self.appear(DOCK_EMPTY, offset=(20, 20)):
                 logger.info('awaken_run finished, no ships to awaken')
@@ -347,18 +402,22 @@ class Awaken(Dock):
                 break
 
             # page_dock -> SHIP_DETAIL_CHECK
-            entered = self.dock_enter_first()
+            entered = self.awaken_enter_ship(skipped)
             if not entered:
-                logger.info('awaken_run finished, no ships to awaken')
+                logger.info(f'awaken_run finished, no more ships to awaken, {skipped} left for the chip reserve')
                 result = 'finish'
                 break
 
             # is_in_awaken
             result = self.awaken_ship(use_array)
             self.awaken_exit()
-            # 'insufficient', 'no_exp', 'timeout'
+            # 'insufficient', 'reserve', 'no_exp', 'timeout'
             if result in ['no_exp', 'level_max']:
                 # Awaken next ship
+                continue
+            if result == 'reserve':
+                # Another ship may be cheaper
+                skipped += 1
                 continue
             if result == 'insufficient':
                 logger.info('awaken_run finished, resources exhausted')
@@ -367,8 +426,56 @@ class Awaken(Dock):
                 logger.info(f'awaken_run finished, result={result}')
                 break
             raise ScriptError(f'Unexpected awaken_ship result: {result}')
+        else:
+            logger.warning('awaken_run finished, too many ships in one run')
 
         return result
+
+    def awaken_enter_ship(self, index, skip_first_screenshot=True):
+        """
+        Enter a ship in dock, counted from the first one.
+
+        Args:
+            index (int): 0 for the first ship
+            skip_first_screenshot:
+
+        Returns:
+            bool: True if success to enter
+                False if there is no ship at that place, or it is not on the first screen of the dock
+
+        Pages:
+            in: page_dock
+            out: SHIP_DETAIL_CHECK
+        """
+        if index == 0:
+            return self.dock_enter_first()
+
+        columns, rows = CARD_GRIDS.grid_shape
+        if index >= columns * rows:
+            logger.info(f'Ship {index} is not on the first screen of the dock')
+            return False
+
+        logger.info(f'Dock enter ship {index}')
+        button = CARD_GRIDS[(index % columns, index // columns)]
+        self.interval_clear(DOCK_CHECK, interval=5)
+        clicked = 0
+        while 1:
+            if skip_first_screenshot:
+                skip_first_screenshot = False
+            else:
+                self.device.screenshot()
+
+            # End
+            if self.appear(SHIP_DETAIL_CHECK, offset=(20, 20)):
+                return True
+
+            # Click
+            if self.appear(DOCK_CHECK, offset=(20, 20), interval=5):
+                if clicked >= 2:
+                    logger.info(f'No ship {index} in dock')
+                    return False
+                self.device.click(button)
+                clicked += 1
 
     def run(self):
         # Run Awakening+ first
@@ -392,4 +499,9 @@ class Awaken(Dock):
         self.dock_filter_set(wait_loading=False)
 
         # Scheduler
-        self.config.task_delay(server_update=True)
+        interval = self.config.Awaken_CheckInterval
+        if interval > 0:
+            # Ships reach their level cap while farming, not once a day
+            self.config.task_delay(minute=interval, server_update=True)
+        else:
+            self.config.task_delay(server_update=True)

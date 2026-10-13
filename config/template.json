@@ -1426,7 +1426,13 @@
     },
     "Awaken": {
       "LevelCap": "level120",
-      "Favourite": false
+      "Favourite": false,
+      "ChipReserve": 0,
+      "Order": "highest_level_first",
+      "Index": "all",
+      "Faction": "all",
+      "Rarity": "all",
+      "CheckInterval": 0
     },
     "Storage": {
       "Storage": {}

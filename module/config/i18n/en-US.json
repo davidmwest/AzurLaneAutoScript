@@ -1758,6 +1758,64 @@
     "Favourite": {
       "name": "Awaken Favourite Ships Only",
       "help": ""
+    },
+    "ChipReserve": {
+      "name": "Cognitive Chips to Keep",
+      "help": "Do not awaken a ship if less than this many cognitive chips would be left. A ship that costs too much is passed over and cheaper ones are still awakened.\n0 to use all of them"
+    },
+    "Order": {
+      "name": "Awaken First",
+      "help": "With a reserve, starting with the lowest levels awakens the most ships, starting with the highest gets ships to their final level cap sooner",
+      "highest_level_first": "Highest level",
+      "lowest_level_first": "Lowest level"
+    },
+    "Index": {
+      "name": "Ship Type",
+      "help": "Only awaken ships of this type",
+      "all": "all",
+      "vanguard": "vanguard",
+      "main": "main",
+      "dd": "dd",
+      "cl": "cl",
+      "ca": "ca",
+      "bb": "bb",
+      "cv": "cv",
+      "repair": "repair",
+      "ss": "ss",
+      "others": "others"
+    },
+    "Faction": {
+      "name": "Faction",
+      "help": "Only awaken ships of this faction",
+      "all": "all",
+      "eagle": "eagle",
+      "royal": "royal",
+      "sakura": "sakura",
+      "iron": "iron",
+      "dragon": "dragon",
+      "sardegna": "sardegna",
+      "northern": "northern",
+      "iris": "iris",
+      "vichya": "vichya",
+      "tulipa": "tulipa",
+      "pedreria": "pedreria",
+      "meta": "meta",
+      "tempesta": "tempesta",
+      "other": "other"
+    },
+    "Rarity": {
+      "name": "Rarity",
+      "help": "Only awaken ships of this rarity",
+      "all": "all",
+      "common": "common",
+      "rare": "rare",
+      "elite": "elite",
+      "super_rare": "super_rare",
+      "ultra": "ultra"
+    },
+    "CheckInterval": {
+      "name": "Check Every X Minutes",
+      "help": "Ships reach their level cap while farming. 0 to check once a day, at server update"
     }
   },
   "GeneralShop": {

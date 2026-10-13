@@ -1758,6 +1758,64 @@
     "Favourite": {
       "name": "Awaken.Favourite.name",
       "help": "Awaken.Favourite.help"
+    },
+    "ChipReserve": {
+      "name": "残しておくメンタルユニット",
+      "help": "覚醒後のメンタルユニットがこの数を下回る場合、その艦船は覚醒しません。消費の多い艦船は飛ばして、ほかの艦船を覚醒します\n0 ですべて使用"
+    },
+    "Order": {
+      "name": "先に覚醒する艦船",
+      "help": "残す数を設定している場合、低レベルからだと多くの艦船を、高レベルからだと早く最終レベル上限まで覚醒できます",
+      "highest_level_first": "レベルが高い順",
+      "lowest_level_first": "レベルが低い順"
+    },
+    "Index": {
+      "name": "艦種",
+      "help": "この艦種の艦船のみ覚醒",
+      "all": "all",
+      "vanguard": "vanguard",
+      "main": "main",
+      "dd": "dd",
+      "cl": "cl",
+      "ca": "ca",
+      "bb": "bb",
+      "cv": "cv",
+      "repair": "repair",
+      "ss": "ss",
+      "others": "others"
+    },
+    "Faction": {
+      "name": "陣営",
+      "help": "この陣営の艦船のみ覚醒",
+      "all": "all",
+      "eagle": "eagle",
+      "royal": "royal",
+      "sakura": "sakura",
+      "iron": "iron",
+      "dragon": "dragon",
+      "sardegna": "sardegna",
+      "northern": "northern",
+      "iris": "iris",
+      "vichya": "vichya",
+      "tulipa": "tulipa",
+      "pedreria": "pedreria",
+      "meta": "meta",
+      "tempesta": "tempesta",
+      "other": "other"
+    },
+    "Rarity": {
+      "name": "レアリティ",
+      "help": "このレアリティの艦船のみ覚醒",
+      "all": "all",
+      "common": "common",
+      "rare": "rare",
+      "elite": "elite",
+      "super_rare": "super_rare",
+      "ultra": "ultra"
+    },
+    "CheckInterval": {
+      "name": "X 分ごとに確認",
+      "help": "艦船は出撃中にレベル上限に達します。0 で 1 日 1 回、サーバー更新時に確認"
     }
   },
   "GeneralShop": {

@@ -1758,6 +1758,64 @@
     "Favourite": {
       "name": "仅觉醒常用舰船",
       "help": ""
+    },
+    "ChipReserve": {
+      "name": "保留心智单元数量",
+      "help": "觉醒后剩余心智单元少于此数量时不觉醒该舰船，会跳过消耗过高的舰船继续觉醒其他舰船\n0 表示全部使用"
+    },
+    "Order": {
+      "name": "优先觉醒",
+      "help": "保留心智单元时，从低等级开始可以觉醒更多舰船，从高等级开始可以更快达到最终等级上限",
+      "highest_level_first": "等级最高",
+      "lowest_level_first": "等级最低"
+    },
+    "Index": {
+      "name": "舰种",
+      "help": "仅觉醒该舰种的舰船",
+      "all": "all",
+      "vanguard": "vanguard",
+      "main": "main",
+      "dd": "dd",
+      "cl": "cl",
+      "ca": "ca",
+      "bb": "bb",
+      "cv": "cv",
+      "repair": "repair",
+      "ss": "ss",
+      "others": "others"
+    },
+    "Faction": {
+      "name": "阵营",
+      "help": "仅觉醒该阵营的舰船",
+      "all": "all",
+      "eagle": "eagle",
+      "royal": "royal",
+      "sakura": "sakura",
+      "iron": "iron",
+      "dragon": "dragon",
+      "sardegna": "sardegna",
+      "northern": "northern",
+      "iris": "iris",
+      "vichya": "vichya",
+      "tulipa": "tulipa",
+      "pedreria": "pedreria",
+      "meta": "meta",
+      "tempesta": "tempesta",
+      "other": "other"
+    },
+    "Rarity": {
+      "name": "稀有度",
+      "help": "仅觉醒该稀有度的舰船",
+      "all": "all",
+      "common": "common",
+      "rare": "rare",
+      "elite": "elite",
+      "super_rare": "super_rare",
+      "ultra": "ultra"
+    },
+    "CheckInterval": {
+      "name": "每 X 分钟检查一次",
+      "help": "舰船会在出击过程中达到等级上限。0 表示每天服务器刷新时检查一次"
     }
   },
   "GeneralShop": {
