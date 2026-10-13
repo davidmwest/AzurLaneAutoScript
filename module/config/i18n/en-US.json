@@ -637,10 +637,11 @@
     },
     "RetireMode": {
       "name": "Retirement Mode",
-      "help": "If mode is one click retire, in game retire settings are enforced\nIf mode is enhance but unable to do so, will fallback to one click retire as default",
+      "help": "If mode is one click retire, in game retire settings are enforced\nIf mode is enhance but unable to do so, will fallback to one click retire as default\nIf mode is do not retire, Alas stops and asks for you when the dock is full",
       "one_click_retire": "One-click Retire",
       "enhance": "Enhance",
-      "old_retire": "Old Retire"
+      "old_retire": "Old Retire",
+      "do_not_retire": "Do Not Retire"
     }
   },
   "OneClickRetire": {

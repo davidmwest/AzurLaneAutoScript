@@ -55,7 +55,7 @@ class GeneratedConfig:
     DropRecord_MeowfficerTalent = 'do_not'  # do_not, save, upload, save_and_upload
 
     # Group `Retirement`
-    Retirement_RetireMode = 'one_click_retire'  # one_click_retire, enhance, old_retire
+    Retirement_RetireMode = 'one_click_retire'  # one_click_retire, enhance, old_retire, do_not_retire
 
     # Group `OneClickRetire`
     OneClickRetire_KeepLimitBreak = 'keep_limit_break'  # keep_limit_break, do_not_keep

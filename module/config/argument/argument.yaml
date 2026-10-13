@@ -123,7 +123,7 @@ DropRecord:
 Retirement:
   RetireMode:
     value: one_click_retire
-    option: [ one_click_retire, enhance, old_retire ]
+    option: [ one_click_retire, enhance, old_retire, do_not_retire ]
 OneClickRetire:
   KeepLimitBreak:
     value: keep_limit_break

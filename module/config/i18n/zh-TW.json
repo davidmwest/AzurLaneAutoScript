@@ -640,7 +640,8 @@
       "help": "若選擇強化，強化材料不足時，退回到一鍵退役",
       "one_click_retire": "一鍵退役",
       "enhance": "強化",
-      "old_retire": "傳統退役"
+      "old_retire": "傳統退役",
+      "do_not_retire": "不退役"
     }
   },
   "OneClickRetire": {

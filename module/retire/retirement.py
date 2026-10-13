@@ -390,6 +390,12 @@ class Retirement(Enhancement, QuickRetireSettingHandler):
         # 2025.05.29 game tips that infos skin feature when you enter dock
         if self.handle_game_tips():
             return True
+        if self.config.Retirement_RetireMode == 'do_not_retire':
+            if self.appear(RETIRE_APPEAR_1, offset=(20, 20)):
+                logger.critical('Dock is full, and Retirement.RetireMode is do_not_retire')
+                logger.critical('Make room in the dock, or choose another retirement mode')
+                raise RequestHumanTakeover
+            return False
         if self._unable_to_enhance:
             if self.appear_then_click(RETIRE_APPEAR_1, offset=(20, 20), interval=3):
                 self.interval_clear(IN_RETIREMENT_CHECK)

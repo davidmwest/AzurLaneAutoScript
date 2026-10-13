@@ -640,7 +640,8 @@
       "help": "若选择强化，强化材料不足时回退到一键退役",
       "one_click_retire": "一键退役",
       "enhance": "强化",
-      "old_retire": "传统退役"
+      "old_retire": "传统退役",
+      "do_not_retire": "不退役"
     }
   },
   "OneClickRetire": {

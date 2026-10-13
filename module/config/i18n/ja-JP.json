@@ -640,7 +640,8 @@
       "help": "Retirement.RetireMode.help",
       "one_click_retire": "one_click_retire",
       "enhance": "enhance",
-      "old_retire": "old_retire"
+      "old_retire": "old_retire",
+      "do_not_retire": "do_not_retire"
     }
   },
   "OneClickRetire": {
