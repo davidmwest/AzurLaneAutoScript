@@ -17,6 +17,8 @@ from module.shop_event.ui import EventShopUI, EVENT_SHOP_SCROLL
 from module.ui_white.assets import BACK_ARROW_WHITE
 
 DETECT_AREA = (221, 194, 1049, 632)
+# How far to scroll between two screens of a scan, in screens. A row of items is about half a screen.
+EVENT_SHOP_SCAN_PAGE = 0.3
 
 
 class ItemNotFoundError(Exception):
@@ -96,33 +98,59 @@ class EventShopClerk(EventShopUI):
             logger.info('No shop items found')
             return []
 
+    @staticmethod
+    def merge_scanned_rows(rows, new_items):
+        """
+        Add the items of a screen to what has been scanned so far.
+        The rows at the top of a screen are usually the last rows of the screen before.
+
+        Args:
+            rows (list[list[EventShopItem]]): Rows of items scanned so far, top to bottom.
+            new_items (list[EventShopItem]): Items on the current screen.
+
+        Returns:
+            list[list[EventShopItem]]:
+        """
+        new_rows = {}
+        for item in new_items:
+            new_rows.setdefault(item.button[1], []).append(item)
+        new_rows = [new_rows[y] for y in sorted(new_rows)]
+
+        def content(scanned):
+            return [[(item.name, item.price, item.count, item.total_count) for item in row] for row in scanned]
+
+        for seen in range(min(len(rows), len(new_rows)), 0, -1):
+            if content(rows[-seen:]) == content(new_rows[:seen]):
+                logger.info('Ignore duplicated items')
+                new_rows = new_rows[seen:]
+                break
+        return rows + new_rows
+
     def scan_all(self):
-        items = []
-        self.device.click_record_clear()
+        rows = []
 
         logger.hr('Event Shop Scan', level=2)
+        # Each event shop has its own amount of items
+        EVENT_SHOP_SCROLL.button_length = None
         EVENT_SHOP_SCROLL.set_top(main=self)
+        at_end = False
         while 1:
+            # Swipes of a scan going well are not a button clicked over and over
+            self.device.click_record_clear()
             new_items = self.event_shop_get_items(scroll_pos=EVENT_SHOP_SCROLL.cal_position(main=self))
-            if len(items):
-                old_last_row = [item for item in items if item.button[1] == items[-1].button[1]]
-                new_first_row = [item for item in new_items if item.button[1] == new_items[0].button[1]]
-                new_second_row = [item for item in new_items if item.button[1] != new_items[0].button[1]]
-                if len(old_last_row) == len(new_first_row) and all(
-                        old.name == new.name for old, new in zip(old_last_row, new_first_row)):
-                    logger.info('Ignore duplicated items')
-                    items += new_second_row
-                else:
-                    items += new_items
-            else:
-                items += new_items
-            if EVENT_SHOP_SCROLL.at_bottom(main=self):
+            rows = self.merge_scanned_rows(rows, new_items)
+            if at_end:
                 logger.info('Event shop reach bottom')
                 break
+            if EVENT_SHOP_SCROLL.at_bottom(main=self):
+                # The scroll counts as at bottom a bit before the end, and the last row is only shown at the end
+                EVENT_SHOP_SCROLL.drag_to_end(main=self)
+                at_end = True
             else:
-                EVENT_SHOP_SCROLL.next_page(main=self, page=0.66)
-                continue
-        return items
+                # Less than a row at a time. A row is only read while all of it is shown,
+                # and the position of the scroll is not known well enough to go by whole pages.
+                EVENT_SHOP_SCROLL.next_page(main=self, page=EVENT_SHOP_SCAN_PAGE)
+        return [item for row in rows for item in row]
 
     def event_shop_buy_item(self, item_to_buy, amount=None):
         scroll_pos = item_to_buy.scroll_pos

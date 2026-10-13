@@ -41,6 +41,38 @@ OCR_EVENT_SHOP_URPT = Digit(SHOP_OCR_BALANCE_SECOND, letter=(100, 100, 100), nam
 
 EVENT_SHOP_TAB_AREA = (206, 92, 1092, 134)
 EVENT_SHOP_TAB_GAP = 33
+# Width of the icon in front of a balance
+EVENT_SHOP_BALANCE_ICON = 29
+
+
+def parse_event_shop_deadline(period, today):
+    """
+    Args:
+        period (str): Period the event shop is open, as read from the screen.
+            Like ":2026.8.13~2026.9.3", or without years like ":10.8-10.21" on EN.
+        today (datetime): Date on the server.
+
+    Returns:
+        datetime | None: When the shop closes, None if the period can not be read.
+    """
+    try:
+        dates = re.findall(r'(\d{4})\.(\d{1,2})\.(\d{1,2})', period)
+        if len(dates) >= 2:
+            y, m, d = dates[-1]
+            return datetime(int(y), int(m), int(d)) + timedelta(days=1)
+
+        dates = re.findall(r'(\d{1,2})\.(\d{1,2})', period)
+        if len(dates) < 2:
+            return None
+        m, d = dates[-1]
+        deadline = datetime(today.year, int(m), int(d)) + timedelta(days=1)
+        # A shop that closes in January, seen in December
+        if deadline < today - timedelta(days=180):
+            deadline = datetime(today.year + 1, int(m), int(d)) + timedelta(days=1)
+        return deadline
+    except ValueError:
+        # Not a date, like 13.45
+        return None
 
 
 class EventShopUI(UI):
@@ -97,13 +129,9 @@ class EventShopUI(UI):
         period = OCR_EVENT_SHOP_DEADLINE.ocr(self.device.image)
         # OCR result is like ":2026.8.13~2026.9.323:59:59", remove "23:59:59"
         period, _, _ = period.partition('23:59:59')
-        pattern = r'(\d{4})\.(\d{1,2})\.(\d{1,2})'
-        matches = re.findall(pattern, period)
-        if not matches or len(matches) < 2:
+        deadline = parse_event_shop_deadline(period, today=datetime.now() - server_time_offset())
+        if deadline is None:
             logger.warning(f"Failed to read event deadline: {period}")
-            return None
-        y, m, d = matches[-1]
-        deadline = datetime(int(y), int(m), int(d)) + timedelta(days=1)  # server deadline
         return deadline
 
     @cached_property
@@ -132,8 +160,31 @@ class EventShopUI(UI):
                 raise GameStuckError('Waiting too long for EventShop to appear.')
         return True
 
+    def is_ur_voucher_balance(self, button):
+        """
+        Args:
+            button (Button): Area of the digits of a balance in the event shop.
+
+        Returns:
+            bool: If the icon in front of the balance is the UR voucher, a light blue orb.
+                The icon of the event points is another one in every event.
+        """
+        x1, y1, x2, y2 = button.area
+        icon = self.image_crop((x1 - EVENT_SHOP_BALANCE_ICON, y1, x1, y2), copy=False).astype(np.int16)
+        blue = icon[:, :, 2] - icon[:, :, 0] > 25
+        return bool(np.mean(blue) > 0.25)
+
     @cached_property
     def is_pt_reversed(self):
+        """
+        Returns:
+            bool: If the event points are the left balance and the UR vouchers the right one.
+        """
+        left = self.is_ur_voucher_balance(SHOP_OCR_BALANCE_SECOND)
+        right = self.is_ur_voucher_balance(SHOP_OCR_BALANCE)
+        if left != right:
+            return right
+        # Can not tell by the icons, go by the events known to have it this way
         blacklist = [
             SHOP_EVENT_20240521
         ]

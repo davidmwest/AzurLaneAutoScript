@@ -6,7 +6,7 @@ import module.config.server as server
 from module.base.button import ButtonGrid
 from module.base.decorator import cached_property, del_cached_property
 from module.base.timer import Timer
-from module.base.utils import rgb2gray
+from module.base.utils import random_rectangle_point, rgb2gray
 from module.logger import logger
 from module.map_detection.utils import Points
 from module.ocr.ocr import Digit, DigitYuv, Ocr
@@ -14,16 +14,25 @@ from module.shop.assets import *
 from module.shop.base import ShopItemGrid_250814
 from module.shop.clerk import ShopClerk
 from module.shop.shop_status import ShopStatus
-from module.ui.scroll import Scroll, best_interval
+from module.ui.scroll import Scroll, best_interval, best_window
 
 
 class ShopScroll(Scroll):
+    # Length of the button, known once the scroll has been seen at the top.
+    # It depends on how much the shop has to sell, set it to None when a different shop is opened.
+    button_length = None
+
     def match_color(self, main):
         """
         The scroll is translucent, so what it looks like depends on the page behind it.
         Where the page is about as dark as the scroll itself, a row of the button can not be told
         from a row of the background, and taking every row on its own finds pieces of button all over.
+
         The button is one piece, so take the continuous stretch of rows that looks most like it.
+        An end of the button that lies on a dark part of the page is still a guess,
+        and a button of the wrong length gives a wrong position and a wrong page size.
+        At the top one end is known, so the length is measured there
+        and from then on the button is the stretch of that length that fits best.
 
         Args:
             main (ModuleBase):
@@ -47,11 +56,43 @@ class ShopScroll(Scroll):
         button_mask = button_transparency * np.array(self.color) + (1 - button_transparency) * baseline_color
         err_background = np.sum((masked_color - background_mask) ** 2, axis=1)
         err_button = np.sum((masked_color - button_mask) ** 2, axis=1)
-        start, end = best_interval(err_background - err_button)
-        mask = np.zeros(err_button.shape, dtype=np.bool_)
+        # Positive where a row looks more like the button than like the background
+        score = err_background - err_button
+        start, end = best_interval(score)
+        if end > start:
+            if start == 0:
+                # The button is shorter than it is while the list bounces back from the end
+                self.button_length = max(end, self.button_length or 0)
+                end = self.button_length
+            elif self.button_length:
+                start = best_window(score, self.button_length)
+                end = start + self.button_length
+        mask = np.zeros(score.shape, dtype=np.bool_)
         mask[start:end] = True
         self.length = np.sum(mask)
         return mask
+
+    def drag_to_end(self, main):
+        """
+        Drag the button past the lower end of the scroll, however close to the end it already is.
+        set_bottom() leaves it where it is within drag_threshold of the end.
+
+        Args:
+            main (ModuleBase):
+        """
+        logger.info(f'{self.name} drag to end')
+        current = self.cal_position(main)
+        p1 = random_rectangle_point(self.position_to_screen(current), n=1)
+        p2 = random_rectangle_point(self.position_to_screen(1.0, random_range=self.edge_add), n=1)
+        main.device.swipe(p1, p2, name=self.name, distance_check=False)
+
+        # Wait until the list stopped moving
+        previous = None
+        for _ in main.loop(skip_first=False, timeout=3):
+            current = self.cal_position(main)
+            if current == previous:
+                break
+            previous = current
 
 
 MEDAL_SHOP_SCROLL_250814 = ShopScroll(

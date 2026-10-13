@@ -5,7 +5,7 @@ import numpy as np
 
 import module.config.server as server
 
-from module.base.utils import color_similarity_2d, color_similar, rgb2luma
+from module.base.utils import color_similarity_2d, color_similar, crop, rgb2luma
 from module.logger import logger
 from module.ocr.ocr import Ocr, Digit
 from module.shop_event.selector import FILTER_REGEX
@@ -20,20 +20,22 @@ DELTA_PRICE = (28, 164, 128, 193)
 DELTA_TAG = (108, 30, 155, 52)
 COUNTER_COLOR = (106, 120, 131)
 COUNTER_THRESHOLD = 150
-# Letter thresholds to read a counter at, a higher threshold makes the letters bolder
-COUNTER_LETTER_THRESHOLDS = (128, 160, 192)
+# Ways to prepare a counter for reading: (white columns added on each side, letter threshold).
+# A higher threshold makes the letters bolder.
+COUNTER_READINGS = ((0, 128), (0, 160), (0, 192), (4, 128), (4, 160), (4, 192))
 COUNTER_TOTALS = (500, 350, 100, 50, 40, 30, 20, 15, 10, 5, 4, 2, 1)
 PRICE_THRESHOLD = 230
 PRICE_BACKGROUND_COLOR = (61, 78, 91)
-if server.server == 'jp':
-    COUNTER_LEFT_STRIP = 54
-elif server.server == 'en':
-    COUNTER_LEFT_STRIP = 42
-else:
-    COUNTER_LEFT_STRIP = 70
+# Width of the text in front of the counter, "Limit:" on EN.
+# Looked up when reading, the server is not known yet if this module is imported before the config is loaded.
+COUNTER_LEFT_STRIP = {'jp': 54, 'en': 42}
+COUNTER_LEFT_STRIP_DEFAULT = 70
 
 
 class CounterOcr(Ocr):
+    # White columns to add on each side of the counter
+    margin = 0
+
     def __init__(self, buttons, lang='azur_lane', letter=(255, 255, 255), threshold=128,
                  alphabet='0123456789/IDSB', name=None):
         super().__init__(buttons, lang=lang, letter=letter, threshold=threshold, alphabet=alphabet, name=name)
@@ -43,12 +45,26 @@ class CounterOcr(Ocr):
         brightness = np.min(mask, axis=0)
         match = np.where(brightness < COUNTER_THRESHOLD)[0]
         if len(match):
-            left = match[0] + COUNTER_LEFT_STRIP
+            left = match[0] + COUNTER_LEFT_STRIP.get(server.server, COUNTER_LEFT_STRIP_DEFAULT)
             total = mask.shape[1]
             if left < total:
                 image = image[:, left:]
         image = super().pre_process(image)
+        if self.margin:
+            image = np.pad(image, [(0, 0), (self.margin, self.margin)], 'constant', constant_values=255)
         return image
+
+    @staticmethod
+    def count_glyphs(image):
+        """
+        Args:
+            image (np.ndarray): Pre-processed counter, dark letters on white.
+
+        Returns:
+            int: Number of separate letters. Letters that touch each other count as one.
+        """
+        ink = np.concatenate(([False], np.min(image, axis=0) < 128, [False]))
+        return int(np.count_nonzero(ink[1:] & ~ink[:-1]))
 
     def after_process(self, result):
         result = super().after_process(result)
@@ -94,27 +110,35 @@ class CounterOcr(Ocr):
         return [current, total]
 
     @classmethod
-    def vote(cls, readings):
+    def vote(cls, readings, glyphs=None):
         """
         Args:
             readings (list[str]): The same counter read in different ways.
+            glyphs (int): Number of letters seen in the picture of the counter.
 
         Returns:
             str: The counter most readings agree on, the earlier reading on a tie.
+                Readings with as many letters as the picture has go first.
                 The first reading if none of them is a counter.
         """
         counters = [reading for reading in readings if cls.is_counter(reading)]
         if not counters:
             return readings[0]
+        fitting = [reading for reading in counters if len(reading) == glyphs]
+        if fitting:
+            counters = fitting
         return max(counters, key=counters.count)
 
     def ocr(self, image, direct_ocr=False):
         """
         Do OCR on a counter, such as `14/15`, and returns 14, 15
 
-        The model drops a thin digit next to the slash every now and then, "10/10" comes back as "10/0"
-        or "100/100" as "00/100", and which counters it happens to depends on how bold the letters are.
-        So each counter is read at several letter thresholds and the reading most of them agree on is taken.
+        The model drops a thin "1" every now and then, "10/10" comes back as "0/10" or "10/0"
+        and "100/100" as "00/100". Which counters it happens to depends on how the picture is prepared,
+        and sometimes most ways of preparing it get the same counter wrong.
+        So each counter is read in several ways, and the reading is taken that has as many letters
+        as the picture has. If letters touch each other and can not be counted,
+        it is the reading that most ways agree on.
 
         Args:
             image:
@@ -123,18 +147,23 @@ class CounterOcr(Ocr):
         Returns:
             list[list[int]: [[current, total]].
         """
-        threshold = self.threshold
+        counters = list(image) if direct_ocr else [crop(image, area) for area in self.buttons]
+        glyphs = [self.count_glyphs(self.pre_process(counter)) for counter in counters]
+
+        margin, threshold = self.margin, self.threshold
         readings = []
         try:
-            for letter_threshold in COUNTER_LETTER_THRESHOLDS:
-                self.threshold = letter_threshold
-                readings.append(super().ocr(image, direct_ocr=direct_ocr))
+            for reading_margin, reading_threshold in COUNTER_READINGS:
+                self.margin, self.threshold = reading_margin, reading_threshold
+                reading = Ocr.ocr(self, counters, direct_ocr=True)
+                readings.append(reading if isinstance(reading, list) else [reading])
         finally:
-            self.threshold = threshold
+            self.margin, self.threshold = margin, threshold
 
-        if isinstance(readings[0], list):
-            return [self.parse_result(self.vote(list(texts))) for texts in zip(*readings)]
-        return self.parse_result(self.vote(readings))
+        results = [self.parse_result(self.vote(list(texts), count)) for texts, count in zip(zip(*readings), glyphs)]
+        if len(self.buttons) == 1:
+            return results[0]
+        return results
 
 
 class PriceOcr(Digit):

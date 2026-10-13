@@ -27,6 +27,21 @@ def best_interval(score):
     return start, end
 
 
+def best_window(score, length):
+    """
+    Find the interval of a given length with the highest total score.
+
+    Args:
+        score (np.ndarray): Shape (n,), positive where the thing to find is likely.
+        length (int): Length of the interval, 1 to n.
+
+    Returns:
+        int: Start of the interval, the first one if several are equally good.
+    """
+    total = np.concatenate(([0.], np.cumsum(score, dtype=np.float64)))
+    return int(np.argmax(total[length:] - total[:-length]))
+
+
 class Scroll:
     color_threshold = 221
     drag_threshold = 0.05

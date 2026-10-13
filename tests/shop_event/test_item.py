@@ -2,8 +2,10 @@
 import os
 
 import cv2
+import numpy as np
 import pytest
 
+from module.config import server
 from module.ocr.ocr import Ocr
 from module.shop_event import item
 from module.shop_event.item import CounterOcr, EventShopItem
@@ -122,8 +124,9 @@ class TestCounterOcrAfterProcess:
 
     def test_ocr_invalid_counter_returns_sentinel(self, monkeypatch):
         monkeypatch.setattr(Ocr, 'ocr', lambda *args, **kwargs: ['/', '500/500'])
+        blank = np.full((16, 60, 3), 255, dtype=np.uint8)
 
-        assert self.ocr.ocr([None, None], direct_ocr=True) == [[0, 0], [500, 500]]
+        assert self.ocr.ocr([blank, blank], direct_ocr=True) == [[0, 0], [500, 500]]
 
 
 @pytest.mark.parametrize('readings, expected', [
@@ -142,23 +145,64 @@ def test_counter_vote(readings, expected):
     assert CounterOcr.vote(readings) == expected
 
 
-def test_reads_the_stock_counters_of_a_shop_screen(monkeypatch):
-    """
-    ./data/counters.png is the "Limit:10/10" line of the 10 items on a screenshot of the EN client,
-    one above the other. "10/10" of the 8th item used to come back as "10/0".
-    """
-    image = cv2.cvtColor(cv2.imread(os.path.join(os.path.dirname(__file__), 'data', 'counters.png')),
-                         cv2.COLOR_BGR2RGB)
-    counters = [image[y:y + 16] for y in range(0, image.shape[0], 16)]
-    # Width of "Limit:" on the EN client
-    monkeypatch.setattr(item, 'COUNTER_LEFT_STRIP', 42)
-    ocr = CounterOcr([], letter=item.COUNTER_COLOR, name='Test_counter_ocr')
+@pytest.mark.parametrize('readings, glyphs, expected', [
+    # Most readings lost a letter, the picture has 7
+    (['00/100', '00/100', '100/100'], 7, '100/100'),
+    (['0/10', '0/10', '10/10', '0/10'], 5, '10/10'),
+    # Letters that touch can not be counted, back to what most agree on
+    (['4/4', '4/4', '4/4'], 2, '4/4'),
+    (['4/10', '4/1', '4/10'], 2, '4/10'),
+    # A reading that is not a counter does not win by its length
+    (['10/0', '10/10', '4/1'], 4, '10/10'),
+])
+def test_counter_vote_prefers_readings_as_long_as_the_picture(readings, glyphs, expected):
+    assert CounterOcr.vote(readings, glyphs) == expected
 
-    assert ocr.ocr(counters, direct_ocr=True) == [
+
+@pytest.mark.parametrize('columns, expected', [
+    ('', 0),
+    ('    ', 0),
+    ('## ', 1),
+    (' # ## #', 3),
+    ('#######', 1),
+])
+def test_count_glyphs(columns, expected):
+    image = np.full((16, len(columns)), 255, dtype=np.uint8)
+    for x, column in enumerate(columns):
+        if column == '#':
+            image[4:12, x] = 0
+
+    assert CounterOcr.count_glyphs(image) == expected
+
+
+def load_counters(name):
+    """
+    Files in ./data are the "Limit:10/10" lines of items on screenshots of the EN client, one above the other.
+    """
+    image = cv2.cvtColor(cv2.imread(os.path.join(os.path.dirname(__file__), 'data', name)), cv2.COLOR_BGR2RGB)
+    return [image[y:y + 16] for y in range(0, image.shape[0], 16)]
+
+
+@pytest.mark.parametrize('name, expected', [
+    # "10/10" of the 8th item came back as "10/0" at the usual letter threshold
+    ('counters.png', [
         [10, 10], [1, 1], [1, 1], [350, 350], [500, 500],
         [1, 1], [5, 5], [10, 10], [4, 10], [5, 5],
-    ]
-    assert ocr.threshold == 128
+    ]),
+    # "10/10" of the 6th item came back as "0/10" at any letter threshold,
+    # and "100/100" of the last two as "00/100" and "100/00" in most ways of reading
+    ('counters_2.png', [
+        [1, 1], [350, 350], [495, 500], [5, 5], [10, 10],
+        [10, 10], [5, 5], [2, 2], [30, 30], [10, 10],
+        [100, 100], [100, 100],
+    ]),
+])
+def test_reads_the_stock_counters_of_a_shop_screen(monkeypatch, name, expected):
+    monkeypatch.setattr(server, 'server', 'en')
+    ocr = CounterOcr([], letter=item.COUNTER_COLOR, name='Test_counter_ocr')
+
+    assert ocr.ocr(load_counters(name), direct_ocr=True) == expected
+    assert (ocr.margin, ocr.threshold) == (0, 128)
 
 
 def test_price_135_total_15_is_equip_ssr():
