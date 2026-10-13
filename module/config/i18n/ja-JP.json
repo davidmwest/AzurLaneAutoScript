@@ -1022,6 +1022,74 @@
       "advice": "おすすめ編成を使う"
     }
   },
+  "ShipRotation": {
+    "_info": {
+      "name": "艦船ローテーション",
+      "help": "出撃前に、育成が終わった艦船をドックの次の艦船と入れ替えます。\nイベントのハードなど、専用の編成を持つ海域が対象です。入るのはドックで最初に条件を満たす艦船なので、並び順と絞り込みで次に育てる艦船が決まります"
+    },
+    "Enable": {
+      "name": "艦船を入れ替える",
+      "help": ""
+    },
+    "Level": {
+      "name": "このレベルで入れ替える",
+      "help": "このレベル以上の艦船は編成から外れます"
+    },
+    "MinLevel": {
+      "name": "入れる艦船の最低レベル",
+      "help": "このレベル未満の艦船は入れません"
+    },
+    "Favourite": {
+      "name": "常用艦船のみ",
+      "help": "ドックで常用に設定した艦船のみ入れます"
+    },
+    "FromFleets": {
+      "name": "艦隊に編成中の艦船も入れる",
+      "help": "6 つの通常艦隊に編成中の艦船も入れます"
+    },
+    "Sort": {
+      "name": "ドックの並び順",
+      "help": "",
+      "level": "レベル",
+      "total": "総合性能",
+      "rarity": "レアリティ",
+      "join": "入手順",
+      "intimacy": "好感度"
+    },
+    "Descending": {
+      "name": "高い順",
+      "help": "オフで低い順"
+    },
+    "Faction": {
+      "name": "陣営",
+      "help": "この陣営の艦船のみ入れます",
+      "all": "all",
+      "eagle": "eagle",
+      "royal": "royal",
+      "sakura": "sakura",
+      "iron": "iron",
+      "dragon": "dragon",
+      "sardegna": "sardegna",
+      "northern": "northern",
+      "iris": "iris",
+      "vichya": "vichya",
+      "tulipa": "tulipa",
+      "pedreria": "pedreria",
+      "meta": "meta",
+      "tempesta": "tempesta",
+      "other": "other"
+    },
+    "Rarity": {
+      "name": "レアリティ",
+      "help": "このレアリティの艦船のみ入れます",
+      "all": "all",
+      "common": "common",
+      "rare": "rare",
+      "elite": "elite",
+      "super_rare": "super_rare",
+      "ultra": "ultra"
+    }
+  },
   "Submarine": {
     "_info": {
       "name": "Submarine._info.name",

@@ -30,6 +30,30 @@ class Level(ModuleBase):
         """
         self._lv = value
 
+    # Levels last seen in each fleet, {1: [6 levels], 2: [6 levels]}.
+    # Kept from one sortie to the next, to know who to replace before the next one.
+    _lv_fleets = None
+
+    @property
+    def lv_fleets(self):
+        """
+        Returns:
+            dict[int, list[int]]:
+        """
+        if self._lv_fleets is None:
+            self._lv_fleets = {}
+        return self._lv_fleets
+
+    def lv_remember(self):
+        """
+        Remember the levels of the fleet shown, those that were read.
+        """
+        fleet = getattr(self, 'fleet_show_index', 1)
+        known = self.lv_fleets.setdefault(fleet, [-1] * 6)
+        for position, level in enumerate(self.lv):
+            if level > 0:
+                known[position] = level
+
     def lv_reset(self):
         """
         Call this method after enter map.
@@ -57,7 +81,8 @@ class Level(ModuleBase):
         Returns:
             list[int]:
         """
-        if not self.config.StopCondition_ReachLevel and not self.config.STOP_IF_REACH_LV32:
+        if not self.config.StopCondition_ReachLevel and not self.config.STOP_IF_REACH_LV32 \
+                and not self.config.ShipRotation_Enable:
             return [-1] * 6
 
         self._lv_before_battle = self.lv if after_battle else [-1] * 6
@@ -65,6 +90,7 @@ class Level(ModuleBase):
         ocr = LevelOcr(self._lv_grid().buttons, name='LevelOcr')
         self.lv = ocr.ocr(self.device.image)
         logger.attr('LEVEL', ', '.join(str(data) for data in self.lv))
+        self.lv_remember()
 
         if after_battle:
             self.lv_triggered()

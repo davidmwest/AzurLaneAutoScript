@@ -198,6 +198,22 @@ Fleet:
   HardLineup:
     value: stop
     option: [ stop, advice ]
+ShipRotation:
+  Enable: false
+  Level: 120
+  MinLevel: 1
+  Favourite: false
+  FromFleets: true
+  Sort:
+    value: level
+    option: [ level, total, rarity, join, intimacy ]
+  Descending: true
+  Faction:
+    value: all
+    option: [ all, eagle, royal, sakura, iron, dragon, sardegna, northern, iris, vichya, tulipa, pedreria, meta, tempesta, other ]
+  Rarity:
+    value: all
+    option: [ all, common, rare, elite, super_rare, ultra ]
 Submarine:
   Fleet:
     value: 0

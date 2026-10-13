@@ -276,6 +276,53 @@ class FleetOperator:
 class FleetPreparation(InfoHandler):
     map_fleet_checked = False
     map_is_hard_mode = False
+    # Ships that could not be replaced, (fleet, position). Not tried again before every sortie.
+    _rotation_failed = None
+
+    def lineup_rotation(self):
+        """
+        Replace the ships of the lineup that have reached ShipRotation_Level,
+        going by the levels seen on the map in the sorties before.
+
+        Returns:
+            bool: If any ship has been replaced.
+
+        Pages:
+            in: FLEET_PREPARATION, of a stage that has its own lineup
+            out: FLEET_PREPARATION
+        """
+        if not self.config.ShipRotation_Enable:
+            return False
+        if self._rotation_failed is None:
+            self._rotation_failed = set()
+
+        # The dock is not needed for anything else here
+        from module.map.lineup_rotation import LineupRotation, slots_to_rotate
+
+        # Levels are read by module.combat.level, which is another part of the campaign
+        lv_fleets = getattr(self, 'lv_fleets', {})
+        in_use = {1: self.config.Fleet_Fleet1, 2: self.config.Fleet_Fleet2}
+        slots = [
+            (fleet, position) for fleet, position in slots_to_rotate(lv_fleets, self.config.ShipRotation_Level)
+            if in_use.get(fleet) and (fleet, position) not in self._rotation_failed
+        ]
+        if not slots:
+            return False
+
+        logger.hr('Ship rotation', level=1)
+        logger.info(f'Reached level {self.config.ShipRotation_Level}: {slots}, levels {lv_fleets}')
+        rotation = LineupRotation(config=self.config, device=self.device)
+        changed = False
+        for fleet, position in slots:
+            if rotation.rotate(fleet, position):
+                changed = True
+                # Not known until the map shows it
+                lv_fleets[fleet][position] = -1
+            else:
+                self._rotation_failed.add((fleet, position))
+
+        self.device.screenshot()
+        return changed
 
     def fleet_preparation(self):
         """Change fleets.
@@ -334,6 +381,7 @@ class FleetPreparation(InfoHandler):
         self.map_is_hard_mode = h1 or h2 or h3
         if self.map_is_hard_mode:
             logger.info('Hard Campaign. No fleet preparation')
+            self.lineup_rotation()
             # Clear submarine if user did not set a submarine fleet
             if submarine.allow():
                 if self.config.Submarine_Fleet:

@@ -33,6 +33,7 @@ Farm:
       - Campaign
       - StopCondition
       - Fleet
+      - ShipRotation
       - Submarine
       - Emotion
       - HpControl
@@ -42,6 +43,7 @@ Farm:
       - Campaign
       - StopCondition
       - Fleet
+      - ShipRotation
       - Submarine
       - Emotion
       - HpControl
@@ -51,6 +53,7 @@ Farm:
       - Campaign
       - StopCondition
       - Fleet
+      - ShipRotation
       - Submarine
       - Emotion
       - HpControl
@@ -62,6 +65,7 @@ Farm:
       - Campaign
       - StopCondition
       - Fleet
+      - ShipRotation
       - Submarine
       - Emotion
 
@@ -79,6 +83,7 @@ Event:
       - Campaign
       - StopCondition
       - Fleet
+      - ShipRotation
       - Submarine
       - Emotion
       - HpControl
@@ -88,6 +93,7 @@ Event:
       - Campaign
       - StopCondition
       - Fleet
+      - ShipRotation
       - Submarine
       - Emotion
       - HpControl
@@ -117,6 +123,7 @@ Event:
       - Campaign
       - StopCondition
       - Fleet
+      - ShipRotation
       - Submarine
       - Emotion
       - HpControl
@@ -135,6 +142,7 @@ EventDaily:
       - Campaign
       - StopCondition
       - Fleet
+      - ShipRotation
       - Submarine
       - Emotion
       - HpControl
@@ -145,6 +153,7 @@ EventDaily:
       - Campaign
       - StopCondition
       - Fleet
+      - ShipRotation
       - Submarine
       - Emotion
       - HpControl
@@ -155,6 +164,7 @@ EventDaily:
       - Campaign
       - StopCondition
       - Fleet
+      - ShipRotation
       - Submarine
       - Emotion
       - HpControl
@@ -165,6 +175,7 @@ EventDaily:
       - Campaign
       - StopCondition
       - Fleet
+      - ShipRotation
       - Submarine
       - Emotion
       - HpControl
@@ -174,6 +185,7 @@ EventDaily:
       - Campaign
       - StopCondition
       - Fleet
+      - ShipRotation
       - Submarine
       - Emotion
       - HpControl

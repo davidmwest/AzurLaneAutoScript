@@ -102,6 +102,17 @@ class GeneratedConfig:
     Fleet_FleetOrder = 'fleet1_mob_fleet2_boss'  # fleet1_mob_fleet2_boss, fleet1_boss_fleet2_mob, fleet1_all_fleet2_standby, fleet1_standby_fleet2_all
     Fleet_HardLineup = 'stop'  # stop, advice
 
+    # Group `ShipRotation`
+    ShipRotation_Enable = False
+    ShipRotation_Level = 120
+    ShipRotation_MinLevel = 1
+    ShipRotation_Favourite = False
+    ShipRotation_FromFleets = True
+    ShipRotation_Sort = 'level'  # level, total, rarity, join, intimacy
+    ShipRotation_Descending = True
+    ShipRotation_Faction = 'all'  # all, eagle, royal, sakura, iron, dragon, sardegna, northern, iris, vichya, tulipa, pedreria, meta, tempesta, other
+    ShipRotation_Rarity = 'all'  # all, common, rare, elite, super_rare, ultra
+
     # Group `Submarine`
     Submarine_Fleet = 0  # 0, 1, 2
     Submarine_Mode = 'do_not_use'  # do_not_use, hunt_only, boss_only, hunt_and_boss, every_combat

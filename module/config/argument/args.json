@@ -643,6 +643,76 @@
         ]
       }
     },
+    "ShipRotation": {
+      "Enable": {
+        "type": "checkbox",
+        "value": false
+      },
+      "Level": {
+        "type": "input",
+        "value": 120
+      },
+      "MinLevel": {
+        "type": "input",
+        "value": 1
+      },
+      "Favourite": {
+        "type": "checkbox",
+        "value": false
+      },
+      "FromFleets": {
+        "type": "checkbox",
+        "value": true
+      },
+      "Sort": {
+        "type": "select",
+        "value": "level",
+        "option": [
+          "level",
+          "total",
+          "rarity",
+          "join",
+          "intimacy"
+        ]
+      },
+      "Descending": {
+        "type": "checkbox",
+        "value": true
+      },
+      "Faction": {
+        "type": "select",
+        "value": "all",
+        "option": [
+          "all",
+          "eagle",
+          "royal",
+          "sakura",
+          "iron",
+          "dragon",
+          "sardegna",
+          "northern",
+          "iris",
+          "vichya",
+          "tulipa",
+          "pedreria",
+          "meta",
+          "tempesta",
+          "other"
+        ]
+      },
+      "Rarity": {
+        "type": "select",
+        "value": "all",
+        "option": [
+          "all",
+          "common",
+          "rare",
+          "elite",
+          "super_rare",
+          "ultra"
+        ]
+      }
+    },
     "Submarine": {
       "Fleet": {
         "type": "select",
@@ -1030,6 +1100,76 @@
         ]
       }
     },
+    "ShipRotation": {
+      "Enable": {
+        "type": "checkbox",
+        "value": false
+      },
+      "Level": {
+        "type": "input",
+        "value": 120
+      },
+      "MinLevel": {
+        "type": "input",
+        "value": 1
+      },
+      "Favourite": {
+        "type": "checkbox",
+        "value": false
+      },
+      "FromFleets": {
+        "type": "checkbox",
+        "value": true
+      },
+      "Sort": {
+        "type": "select",
+        "value": "level",
+        "option": [
+          "level",
+          "total",
+          "rarity",
+          "join",
+          "intimacy"
+        ]
+      },
+      "Descending": {
+        "type": "checkbox",
+        "value": true
+      },
+      "Faction": {
+        "type": "select",
+        "value": "all",
+        "option": [
+          "all",
+          "eagle",
+          "royal",
+          "sakura",
+          "iron",
+          "dragon",
+          "sardegna",
+          "northern",
+          "iris",
+          "vichya",
+          "tulipa",
+          "pedreria",
+          "meta",
+          "tempesta",
+          "other"
+        ]
+      },
+      "Rarity": {
+        "type": "select",
+        "value": "all",
+        "option": [
+          "all",
+          "common",
+          "rare",
+          "elite",
+          "super_rare",
+          "ultra"
+        ]
+      }
+    },
     "Submarine": {
       "Fleet": {
         "type": "select",
@@ -1414,6 +1554,76 @@
         "option": [
           "stop",
           "advice"
+        ]
+      }
+    },
+    "ShipRotation": {
+      "Enable": {
+        "type": "checkbox",
+        "value": false
+      },
+      "Level": {
+        "type": "input",
+        "value": 120
+      },
+      "MinLevel": {
+        "type": "input",
+        "value": 1
+      },
+      "Favourite": {
+        "type": "checkbox",
+        "value": false
+      },
+      "FromFleets": {
+        "type": "checkbox",
+        "value": true
+      },
+      "Sort": {
+        "type": "select",
+        "value": "level",
+        "option": [
+          "level",
+          "total",
+          "rarity",
+          "join",
+          "intimacy"
+        ]
+      },
+      "Descending": {
+        "type": "checkbox",
+        "value": true
+      },
+      "Faction": {
+        "type": "select",
+        "value": "all",
+        "option": [
+          "all",
+          "eagle",
+          "royal",
+          "sakura",
+          "iron",
+          "dragon",
+          "sardegna",
+          "northern",
+          "iris",
+          "vichya",
+          "tulipa",
+          "pedreria",
+          "meta",
+          "tempesta",
+          "other"
+        ]
+      },
+      "Rarity": {
+        "type": "select",
+        "value": "all",
+        "option": [
+          "all",
+          "common",
+          "rare",
+          "elite",
+          "super_rare",
+          "ultra"
         ]
       }
     },
@@ -1915,6 +2125,76 @@
         ]
       }
     },
+    "ShipRotation": {
+      "Enable": {
+        "type": "checkbox",
+        "value": false
+      },
+      "Level": {
+        "type": "input",
+        "value": 120
+      },
+      "MinLevel": {
+        "type": "input",
+        "value": 1
+      },
+      "Favourite": {
+        "type": "checkbox",
+        "value": false
+      },
+      "FromFleets": {
+        "type": "checkbox",
+        "value": true
+      },
+      "Sort": {
+        "type": "select",
+        "value": "level",
+        "option": [
+          "level",
+          "total",
+          "rarity",
+          "join",
+          "intimacy"
+        ]
+      },
+      "Descending": {
+        "type": "checkbox",
+        "value": true
+      },
+      "Faction": {
+        "type": "select",
+        "value": "all",
+        "option": [
+          "all",
+          "eagle",
+          "royal",
+          "sakura",
+          "iron",
+          "dragon",
+          "sardegna",
+          "northern",
+          "iris",
+          "vichya",
+          "tulipa",
+          "pedreria",
+          "meta",
+          "tempesta",
+          "other"
+        ]
+      },
+      "Rarity": {
+        "type": "select",
+        "value": "all",
+        "option": [
+          "all",
+          "common",
+          "rare",
+          "elite",
+          "super_rare",
+          "ultra"
+        ]
+      }
+    },
     "Submarine": {
       "Fleet": {
         "type": "select",
@@ -2353,6 +2633,76 @@
         ]
       }
     },
+    "ShipRotation": {
+      "Enable": {
+        "type": "checkbox",
+        "value": false
+      },
+      "Level": {
+        "type": "input",
+        "value": 120
+      },
+      "MinLevel": {
+        "type": "input",
+        "value": 1
+      },
+      "Favourite": {
+        "type": "checkbox",
+        "value": false
+      },
+      "FromFleets": {
+        "type": "checkbox",
+        "value": true
+      },
+      "Sort": {
+        "type": "select",
+        "value": "level",
+        "option": [
+          "level",
+          "total",
+          "rarity",
+          "join",
+          "intimacy"
+        ]
+      },
+      "Descending": {
+        "type": "checkbox",
+        "value": true
+      },
+      "Faction": {
+        "type": "select",
+        "value": "all",
+        "option": [
+          "all",
+          "eagle",
+          "royal",
+          "sakura",
+          "iron",
+          "dragon",
+          "sardegna",
+          "northern",
+          "iris",
+          "vichya",
+          "tulipa",
+          "pedreria",
+          "meta",
+          "tempesta",
+          "other"
+        ]
+      },
+      "Rarity": {
+        "type": "select",
+        "value": "all",
+        "option": [
+          "all",
+          "common",
+          "rare",
+          "elite",
+          "super_rare",
+          "ultra"
+        ]
+      }
+    },
     "Submarine": {
       "Fleet": {
         "type": "select",
@@ -2785,6 +3135,76 @@
         "option": [
           "stop",
           "advice"
+        ]
+      }
+    },
+    "ShipRotation": {
+      "Enable": {
+        "type": "checkbox",
+        "value": false
+      },
+      "Level": {
+        "type": "input",
+        "value": 120
+      },
+      "MinLevel": {
+        "type": "input",
+        "value": 1
+      },
+      "Favourite": {
+        "type": "checkbox",
+        "value": false
+      },
+      "FromFleets": {
+        "type": "checkbox",
+        "value": true
+      },
+      "Sort": {
+        "type": "select",
+        "value": "level",
+        "option": [
+          "level",
+          "total",
+          "rarity",
+          "join",
+          "intimacy"
+        ]
+      },
+      "Descending": {
+        "type": "checkbox",
+        "value": true
+      },
+      "Faction": {
+        "type": "select",
+        "value": "all",
+        "option": [
+          "all",
+          "eagle",
+          "royal",
+          "sakura",
+          "iron",
+          "dragon",
+          "sardegna",
+          "northern",
+          "iris",
+          "vichya",
+          "tulipa",
+          "pedreria",
+          "meta",
+          "tempesta",
+          "other"
+        ]
+      },
+      "Rarity": {
+        "type": "select",
+        "value": "all",
+        "option": [
+          "all",
+          "common",
+          "rare",
+          "elite",
+          "super_rare",
+          "ultra"
         ]
       }
     },
@@ -4156,6 +4576,76 @@
         ]
       }
     },
+    "ShipRotation": {
+      "Enable": {
+        "type": "checkbox",
+        "value": false
+      },
+      "Level": {
+        "type": "input",
+        "value": 120
+      },
+      "MinLevel": {
+        "type": "input",
+        "value": 1
+      },
+      "Favourite": {
+        "type": "checkbox",
+        "value": false
+      },
+      "FromFleets": {
+        "type": "checkbox",
+        "value": true
+      },
+      "Sort": {
+        "type": "select",
+        "value": "level",
+        "option": [
+          "level",
+          "total",
+          "rarity",
+          "join",
+          "intimacy"
+        ]
+      },
+      "Descending": {
+        "type": "checkbox",
+        "value": true
+      },
+      "Faction": {
+        "type": "select",
+        "value": "all",
+        "option": [
+          "all",
+          "eagle",
+          "royal",
+          "sakura",
+          "iron",
+          "dragon",
+          "sardegna",
+          "northern",
+          "iris",
+          "vichya",
+          "tulipa",
+          "pedreria",
+          "meta",
+          "tempesta",
+          "other"
+        ]
+      },
+      "Rarity": {
+        "type": "select",
+        "value": "all",
+        "option": [
+          "all",
+          "common",
+          "rare",
+          "elite",
+          "super_rare",
+          "ultra"
+        ]
+      }
+    },
     "Submarine": {
       "Fleet": {
         "type": "select",
@@ -4605,6 +5095,76 @@
         "option": [
           "stop",
           "advice"
+        ]
+      }
+    },
+    "ShipRotation": {
+      "Enable": {
+        "type": "checkbox",
+        "value": false
+      },
+      "Level": {
+        "type": "input",
+        "value": 120
+      },
+      "MinLevel": {
+        "type": "input",
+        "value": 1
+      },
+      "Favourite": {
+        "type": "checkbox",
+        "value": false
+      },
+      "FromFleets": {
+        "type": "checkbox",
+        "value": true
+      },
+      "Sort": {
+        "type": "select",
+        "value": "level",
+        "option": [
+          "level",
+          "total",
+          "rarity",
+          "join",
+          "intimacy"
+        ]
+      },
+      "Descending": {
+        "type": "checkbox",
+        "value": true
+      },
+      "Faction": {
+        "type": "select",
+        "value": "all",
+        "option": [
+          "all",
+          "eagle",
+          "royal",
+          "sakura",
+          "iron",
+          "dragon",
+          "sardegna",
+          "northern",
+          "iris",
+          "vichya",
+          "tulipa",
+          "pedreria",
+          "meta",
+          "tempesta",
+          "other"
+        ]
+      },
+      "Rarity": {
+        "type": "select",
+        "value": "all",
+        "option": [
+          "all",
+          "common",
+          "rare",
+          "elite",
+          "super_rare",
+          "ultra"
         ]
       }
     },
@@ -5060,6 +5620,76 @@
         ]
       }
     },
+    "ShipRotation": {
+      "Enable": {
+        "type": "checkbox",
+        "value": false
+      },
+      "Level": {
+        "type": "input",
+        "value": 120
+      },
+      "MinLevel": {
+        "type": "input",
+        "value": 1
+      },
+      "Favourite": {
+        "type": "checkbox",
+        "value": false
+      },
+      "FromFleets": {
+        "type": "checkbox",
+        "value": true
+      },
+      "Sort": {
+        "type": "select",
+        "value": "level",
+        "option": [
+          "level",
+          "total",
+          "rarity",
+          "join",
+          "intimacy"
+        ]
+      },
+      "Descending": {
+        "type": "checkbox",
+        "value": true
+      },
+      "Faction": {
+        "type": "select",
+        "value": "all",
+        "option": [
+          "all",
+          "eagle",
+          "royal",
+          "sakura",
+          "iron",
+          "dragon",
+          "sardegna",
+          "northern",
+          "iris",
+          "vichya",
+          "tulipa",
+          "pedreria",
+          "meta",
+          "tempesta",
+          "other"
+        ]
+      },
+      "Rarity": {
+        "type": "select",
+        "value": "all",
+        "option": [
+          "all",
+          "common",
+          "rare",
+          "elite",
+          "super_rare",
+          "ultra"
+        ]
+      }
+    },
     "Submarine": {
       "Fleet": {
         "type": "select",
@@ -5509,6 +6139,76 @@
         "option": [
           "stop",
           "advice"
+        ]
+      }
+    },
+    "ShipRotation": {
+      "Enable": {
+        "type": "checkbox",
+        "value": false
+      },
+      "Level": {
+        "type": "input",
+        "value": 120
+      },
+      "MinLevel": {
+        "type": "input",
+        "value": 1
+      },
+      "Favourite": {
+        "type": "checkbox",
+        "value": false
+      },
+      "FromFleets": {
+        "type": "checkbox",
+        "value": true
+      },
+      "Sort": {
+        "type": "select",
+        "value": "level",
+        "option": [
+          "level",
+          "total",
+          "rarity",
+          "join",
+          "intimacy"
+        ]
+      },
+      "Descending": {
+        "type": "checkbox",
+        "value": true
+      },
+      "Faction": {
+        "type": "select",
+        "value": "all",
+        "option": [
+          "all",
+          "eagle",
+          "royal",
+          "sakura",
+          "iron",
+          "dragon",
+          "sardegna",
+          "northern",
+          "iris",
+          "vichya",
+          "tulipa",
+          "pedreria",
+          "meta",
+          "tempesta",
+          "other"
+        ]
+      },
+      "Rarity": {
+        "type": "select",
+        "value": "all",
+        "option": [
+          "all",
+          "common",
+          "rare",
+          "elite",
+          "super_rare",
+          "ultra"
         ]
       }
     },
@@ -5964,6 +6664,76 @@
         ]
       }
     },
+    "ShipRotation": {
+      "Enable": {
+        "type": "checkbox",
+        "value": false
+      },
+      "Level": {
+        "type": "input",
+        "value": 120
+      },
+      "MinLevel": {
+        "type": "input",
+        "value": 1
+      },
+      "Favourite": {
+        "type": "checkbox",
+        "value": false
+      },
+      "FromFleets": {
+        "type": "checkbox",
+        "value": true
+      },
+      "Sort": {
+        "type": "select",
+        "value": "level",
+        "option": [
+          "level",
+          "total",
+          "rarity",
+          "join",
+          "intimacy"
+        ]
+      },
+      "Descending": {
+        "type": "checkbox",
+        "value": true
+      },
+      "Faction": {
+        "type": "select",
+        "value": "all",
+        "option": [
+          "all",
+          "eagle",
+          "royal",
+          "sakura",
+          "iron",
+          "dragon",
+          "sardegna",
+          "northern",
+          "iris",
+          "vichya",
+          "tulipa",
+          "pedreria",
+          "meta",
+          "tempesta",
+          "other"
+        ]
+      },
+      "Rarity": {
+        "type": "select",
+        "value": "all",
+        "option": [
+          "all",
+          "common",
+          "rare",
+          "elite",
+          "super_rare",
+          "ultra"
+        ]
+      }
+    },
     "Submarine": {
       "Fleet": {
         "type": "select",
@@ -6403,6 +7173,76 @@
         "option": [
           "stop",
           "advice"
+        ]
+      }
+    },
+    "ShipRotation": {
+      "Enable": {
+        "type": "checkbox",
+        "value": false
+      },
+      "Level": {
+        "type": "input",
+        "value": 120
+      },
+      "MinLevel": {
+        "type": "input",
+        "value": 1
+      },
+      "Favourite": {
+        "type": "checkbox",
+        "value": false
+      },
+      "FromFleets": {
+        "type": "checkbox",
+        "value": true
+      },
+      "Sort": {
+        "type": "select",
+        "value": "level",
+        "option": [
+          "level",
+          "total",
+          "rarity",
+          "join",
+          "intimacy"
+        ]
+      },
+      "Descending": {
+        "type": "checkbox",
+        "value": true
+      },
+      "Faction": {
+        "type": "select",
+        "value": "all",
+        "option": [
+          "all",
+          "eagle",
+          "royal",
+          "sakura",
+          "iron",
+          "dragon",
+          "sardegna",
+          "northern",
+          "iris",
+          "vichya",
+          "tulipa",
+          "pedreria",
+          "meta",
+          "tempesta",
+          "other"
+        ]
+      },
+      "Rarity": {
+        "type": "select",
+        "value": "all",
+        "option": [
+          "all",
+          "common",
+          "rare",
+          "elite",
+          "super_rare",
+          "ultra"
         ]
       }
     },

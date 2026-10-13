@@ -1022,6 +1022,74 @@
       "advice": "Fill with Advice"
     }
   },
+  "ShipRotation": {
+    "_info": {
+      "name": "Ship Rotation",
+      "help": "Replace ships that are done leveling with the next ones from the dock, before a sortie.\nFor stages that have their own lineup, such as event hard mode. The ship that comes in is the first one in the dock that fits, in the order set below, so the sort order and the filters decide who is leveled next"
+    },
+    "Enable": {
+      "name": "Rotate Ships",
+      "help": ""
+    },
+    "Level": {
+      "name": "Replace Ships at Level",
+      "help": "A ship at this level or above leaves the lineup"
+    },
+    "MinLevel": {
+      "name": "Lowest Level to Bring In",
+      "help": "Ships below this level are not brought in"
+    },
+    "Favourite": {
+      "name": "Favourite Ships Only",
+      "help": "Only bring in ships marked as favourite in the dock"
+    },
+    "FromFleets": {
+      "name": "Ships in Fleets May Come In",
+      "help": "Also bring in ships that are in one of the six common fleets"
+    },
+    "Sort": {
+      "name": "Dock Sort Order",
+      "help": "",
+      "level": "Level",
+      "total": "Total stats",
+      "rarity": "Rarity",
+      "join": "Date obtained",
+      "intimacy": "Affinity"
+    },
+    "Descending": {
+      "name": "Highest First",
+      "help": "Off for lowest first"
+    },
+    "Faction": {
+      "name": "Faction",
+      "help": "Only bring in ships of this faction",
+      "all": "all",
+      "eagle": "eagle",
+      "royal": "royal",
+      "sakura": "sakura",
+      "iron": "iron",
+      "dragon": "dragon",
+      "sardegna": "sardegna",
+      "northern": "northern",
+      "iris": "iris",
+      "vichya": "vichya",
+      "tulipa": "tulipa",
+      "pedreria": "pedreria",
+      "meta": "meta",
+      "tempesta": "tempesta",
+      "other": "other"
+    },
+    "Rarity": {
+      "name": "Rarity",
+      "help": "Only bring in ships of this rarity",
+      "all": "all",
+      "common": "common",
+      "rare": "rare",
+      "elite": "elite",
+      "super_rare": "super_rare",
+      "ultra": "ultra"
+    }
+  },
   "Submarine": {
     "_info": {
       "name": "Submarine Settings",

@@ -1022,6 +1022,74 @@
       "advice": "使用推荐编队"
     }
   },
+  "ShipRotation": {
+    "_info": {
+      "name": "舰船轮换",
+      "help": "出击前，将练级完成的舰船替换为船坞中的下一艘。\n适用于有独立编队的关卡，例如活动困难模式。替换上场的是船坞中第一艘符合条件的舰船，因此排序方式和筛选条件决定了接下来练哪艘船"
+    },
+    "Enable": {
+      "name": "启用舰船轮换",
+      "help": ""
+    },
+    "Level": {
+      "name": "达到该等级时替换",
+      "help": "达到或超过该等级的舰船会被换下"
+    },
+    "MinLevel": {
+      "name": "上场舰船的最低等级",
+      "help": "低于该等级的舰船不会上场"
+    },
+    "Favourite": {
+      "name": "仅常用舰船",
+      "help": "只让船坞中标记为常用的舰船上场"
+    },
+    "FromFleets": {
+      "name": "允许已编入舰队的舰船上场",
+      "help": "已编入六支常规舰队的舰船也可以上场"
+    },
+    "Sort": {
+      "name": "船坞排序方式",
+      "help": "",
+      "level": "等级",
+      "total": "综合性能",
+      "rarity": "稀有度",
+      "join": "入手时间",
+      "intimacy": "好感度"
+    },
+    "Descending": {
+      "name": "从高到低",
+      "help": "关闭则从低到高"
+    },
+    "Faction": {
+      "name": "阵营",
+      "help": "只让该阵营的舰船上场",
+      "all": "all",
+      "eagle": "eagle",
+      "royal": "royal",
+      "sakura": "sakura",
+      "iron": "iron",
+      "dragon": "dragon",
+      "sardegna": "sardegna",
+      "northern": "northern",
+      "iris": "iris",
+      "vichya": "vichya",
+      "tulipa": "tulipa",
+      "pedreria": "pedreria",
+      "meta": "meta",
+      "tempesta": "tempesta",
+      "other": "other"
+    },
+    "Rarity": {
+      "name": "稀有度",
+      "help": "只让该稀有度的舰船上场",
+      "all": "all",
+      "common": "common",
+      "rare": "rare",
+      "elite": "elite",
+      "super_rare": "super_rare",
+      "ultra": "ultra"
+    }
+  },
   "Submarine": {
     "_info": {
       "name": "潜艇设置",
