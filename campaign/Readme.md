@@ -1,3 +1,15 @@
+# Stages
+
+The stages of an event are declared in `campaign/<event>/stages.py`, one `Stage(...)` each: its map, its config and its battle plans. `module/campaign/stage.py` builds the `Config` and `Campaign` classes from that, and documents the fields.
+
+A stage that needs code of its own, a custom `map_data_init()` for example, keeps a module `campaign/<event>/<stage>.py`. When a stage has both, the module is used.
+
+`dev_tools/map_extractor.py` and upstream produce one module per stage. Convert them with:
+
+    python -m dev_tools.stage_convert --write
+
+It converts a module only when the classes built from the declaration are the same as the ones the module defines, and leaves the rest alone. Run it again after merging upstream. When a merge reports a stage module as deleted here and modified upstream, keep upstream's module and run it again.
+
 # Event List
 
 The `/campaign` directory is used to place map files.

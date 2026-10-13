@@ -7,11 +7,8 @@ STAGE_FILTER = Filter(regex=re.compile('^(.*?)$'), attr=('stage',))
 
 
 class EventStage:
-    def __init__(self, filename):
-        self.filename = filename
-        self.stage = 'unknown'
-        if filename[-3:] == '.py':
-            self.stage = filename[:-3]
+    def __init__(self, stage):
+        self.stage = stage
 
     def __str__(self):
         return self.stage

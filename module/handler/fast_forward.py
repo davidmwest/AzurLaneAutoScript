@@ -1,8 +1,8 @@
-import os
 import re
 
 from module.base.timer import Timer
 from module.base.utils import color_bar_percentage
+from module.campaign.stage import stage_names
 from module.handler.assets import *
 from module.handler.auto_search import AutoSearchHandler
 from module.logger import logger
@@ -61,31 +61,6 @@ class SwitchAutoSearch(Switch):
 AUTO_SEARCH = SwitchAutoSearch('Auto_Search')
 AUTO_SEARCH.add_state('on', check_button=AUTO_SEARCH_TITLE, click_button=AUTO_SEARCH_CHECK)
 AUTO_SEARCH.add_state('off', check_button=AUTO_SEARCH_TITLE, click_button=AUTO_SEARCH_CHECK)
-
-
-def map_files(event):
-    """
-    Args:
-        event (str): Event name under './campaign'
-
-    Returns:
-        list[str]: List of map files, such as ['sp1', 'sp2', 'sp3']
-    """
-    folder = f'./campaign/{event}'
-
-    if not os.path.exists(folder):
-        logger.warning(f'Map file folder: {folder} does not exist, can not get map files')
-        return []
-
-    files = []
-    for file in os.listdir(folder):
-        name, ext = os.path.splitext(file)
-        if ext != '.py':
-            continue
-        if name == 'campaign_base':
-            continue
-        files.append(name)
-    return files
 
 
 def to_map_input_name(name: str) -> str:
@@ -430,9 +405,9 @@ class FastForwardHandler(AutoSearchHandler):
                     # Main stages are named like campaign_7_2, but user inputs 7-2
                     if self.config.Campaign_Event == 'campaign_main':
                         return new
-                    # Check if map file exist
-                    existing = map_files(self.config.Campaign_Event)
-                    logger.info(f'Existing files: {existing}')
+                    # Check if the stage exists
+                    existing = stage_names(self.config.Campaign_Event)
+                    logger.info(f'Existing stages: {existing}')
                     if new.lower() in existing:
                         return new
                     else:

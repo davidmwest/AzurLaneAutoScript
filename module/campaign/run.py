@@ -1,14 +1,14 @@
 import copy
-import importlib
 import os
 import random
 
 from module.campaign.campaign_base import CampaignBase
 from module.campaign.campaign_event import CampaignEvent
 from module.campaign.campaign_ui import MODE_SWITCH_1
+from module.campaign.stage import StageNotFound, load_stage, stage_names
 from module.config.config import AzurLaneConfig
 from module.exception import CampaignEnd, RequestHumanTakeover, ScriptEnd
-from module.handler.fast_forward import map_files, to_map_file_name
+from module.handler.fast_forward import to_map_file_name
 from module.logger import logger
 from module.notify import handle_notify
 from module.ui.page import page_campaign
@@ -46,14 +46,13 @@ class CampaignRun(CampaignEvent):
             self.stage = name
 
         try:
-            self.module = importlib.import_module('.' + name, f'campaign.{folder}')
-        except ModuleNotFoundError:
-            logger.warning(f'Map file not found: campaign.{folder}.{name}')
+            self.module = load_stage(folder, name)
+        except StageNotFound:
+            logger.warning(f'Stage not found: campaign.{folder}.{name}')
             if not os.path.exists(f'./campaign/{folder}'):
                 logger.warning(f'Folder not exists: ./campaign/{folder}')
             else:
-                files = map_files(folder)
-                logger.warning(f'Existing files: {files}')
+                logger.warning(f'Existing stages: {stage_names(folder)}')
 
             logger.critical(f'Possible reason #1: This event ({folder}) does not have {name}')
             logger.critical(f'Possible reason #2: You are using an old Alas, '
@@ -324,7 +323,7 @@ class CampaignRun(CampaignEvent):
                 self.config.override(StopCondition_MapAchievement='non_stop')
                 self.config.override(StopCondition_StageIncrease=False)
         # Convert campaign_main to campaign hard if mode is hard and file exists
-        if mode == 'hard' and folder == 'campaign_main' and name in map_files('campaign_hard'):
+        if mode == 'hard' and folder == 'campaign_main' and name in stage_names('campaign_hard'):
             folder = 'campaign_hard'
         # event_20240912_cn does not have "Threat: Safe" indicator, fallback MapAchievement
         if folder == 'event_20240912_cn':
