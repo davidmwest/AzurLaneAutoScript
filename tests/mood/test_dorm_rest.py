@@ -1,5 +1,6 @@
 import os
 from datetime import datetime, timedelta
+from types import SimpleNamespace
 
 import cv2
 import pytest
@@ -8,9 +9,9 @@ import module.config.server as server
 from module.base.button import Button
 from module.base.utils import crop
 from module.map.lineup_rotation import SLOTS_PER_FLEET, lineup_slot
-from module.mood.dorm_rest import PickerCard, DormShip, picker_fleets_ended, picker_is_top, picker_row_tops, \
-    read_dorm_floor, read_picker_row, ship_list_tab, update_moods
-from module.mood.lineup import level_area, match_lineup, portrait_area
+from module.mood.dorm_rest import PickerCard, DormShip, picker_fleets_ended, picker_is_top, picker_low_mood_ended, \
+    picker_row_tops, read_dorm_floor, read_picker_row, ship_list_tab, update_moods
+from module.mood.lineup import learn_lineup_ships, level_area, match_lineup, portrait_area, record_lineup
 from module.mood.ship import ShipMood, ShipMoods, portrait_signature
 from module.ocr.ocr import Digit
 
@@ -168,21 +169,117 @@ def test_update_follows_the_dorm_and_the_fleets():
     assert moods.read == NOW
 
 
+def test_update_reads_ships_out_of_the_fleets_after_them():
+    moods = ShipMoods(Config())
+    two_hours_ago = NOW - timedelta(hours=2)
+    moods.ships['Dmitri Donskoi'] = ShipMood('Dmitri Donskoi', mood=119, time=two_hours_ago, level=100)
+    moods.ships['Nevada META'] = ShipMood('Nevada META', mood=119, time=two_hours_ago, level=117)
+    moods.lineups = {'Event2': {'1': ['Nevada META'], '2': ['Dmitri Donskoi']}}
+    cards = [card(0, '', remove=True), card(1, 'Hatakaze', fleet=1),
+             card(2, 'Dmitri Dons', mood=96, level=100, truncated=True), card(3, 'Nevada', mood=20, level=80)]
+
+    update_moods(moods, [], cards, NOW)
+
+    dmitri = moods.ships['Dmitri Donskoi']
+    assert (dmitri.mood, dmitri.time, dmitri.place, dmitri.fleet) == (96, NOW, 'dock', 0)
+    # Below her level, another ship
+    assert (moods.ships['Nevada META'].mood, moods.ships['Nevada META'].time) == (119, two_hours_ago)
+
+
+def lineup_slots(image):
+    """
+    Returns:
+        list[tuple[int, list[int]]]: Level and portrait signature of each slot of the lineup of a stage.
+    """
+    slots = [lineup_slot(fleet, position) for fleet in (1, 2) for position in range(SLOTS_PER_FLEET)]
+    buttons = [Button(area=level_area(slot), color=(), button=(), name=f'LEVEL_{i}') for i, slot in enumerate(slots)]
+    levels = Digit(buttons, letter=(255, 255, 255), threshold=128, name='LINEUP_LEVEL').ocr(image)
+    signatures = [portrait_signature(crop(image, portrait_area(slot))) for slot in slots]
+    return list(zip(levels, signatures))
+
+
+def dorm_ships():
+    """
+    Returns:
+        list[ShipMood]: Ships read in the dorm.
+    """
+    known = read_dorm_floor(load('dorm_rest.png'), 'rest')[0] + read_dorm_floor(load('dorm_train.png'), 'train')[0]
+    return [ShipMood(ship.name, level=ship.level, sig=ship.sig) for ship in known]
+
+
 def test_lineup_of_a_hard_mode_stage_is_matched_by_level_and_portrait():
     """
     Hatakaze, Oite and Fusou META are all at level 119, Hatakaze and Oite in fleet 1 of the lineup,
     Fusou META in fleet 2.
     """
-    known = read_dorm_floor(load('dorm_rest.png'), 'rest')[0] + read_dorm_floor(load('dorm_train.png'), 'train')[0]
-    ships_known = [ShipMood(ship.name, level=ship.level, sig=ship.sig) for ship in known]
+    slots = lineup_slots(load('lineup.png'))
 
-    image = load('lineup.png')
-    slots = [lineup_slot(fleet, position) for fleet in (1, 2) for position in range(SLOTS_PER_FLEET)]
-    buttons = [Button(area=level_area(slot), color=(), button=(), name=f'LEVEL_{i}') for i, slot in enumerate(slots)]
-    levels = Digit(buttons, letter=(255, 255, 255), threshold=128, name='LINEUP_LEVEL').ocr(image)
-    signatures = [portrait_signature(crop(image, portrait_area(slot))) for slot in slots]
-
-    assert levels == [109, 117, 99, 118, 119, 119, 119, 107, 93, 100, 115, 105]
-    names = match_lineup(list(zip(levels, signatures)), ships_known)
+    assert [level for level, _ in slots] == [109, 117, 99, 118, 119, 119, 119, 107, 93, 100, 115, 105]
+    names = match_lineup(slots, dorm_ships())
     assert names[:6] == ['Victorious META', None, 'Haruna', None, 'Oite', 'Hatakaze']
     assert names[6:] == ['Fusou META', None, None, 'Dmitri Donskoi', None, None]
+
+
+class StorageConfig:
+    def __init__(self):
+        self.storage = {}
+        self.task = SimpleNamespace(command='Event2')
+
+    def is_task_enabled(self, task):
+        return task == 'DormRest'
+
+    def cross_get(self, keys, default=None):
+        return self.storage or default
+
+    def cross_set(self, keys, value):
+        self.storage = value
+
+
+def test_lineup_ships_not_followed_yet_are_kept_by_level_and_portrait():
+    config = StorageConfig()
+    moods = ShipMoods(config)
+    for ship in dorm_ships():
+        moods.ships[ship.name] = ship
+    moods.save()
+    main = SimpleNamespace(config=config, device=SimpleNamespace(image=load('lineup.png')))
+
+    assert not record_lineup(main)
+
+    saved = ShipMoods(config)
+    assert saved.lineups == {'Event2': {'1': ['Victorious META', 'Haruna', 'Oite', 'Hatakaze'],
+                                        '2': ['Fusou META', 'Dmitri Donskoi']}}
+    assert [(slot['fleet'], slot['level']) for slot in saved.unknown['Event2']] == \
+           [(1, 117), (1, 118), (2, 107), (2, 93), (2, 115), (2, 105)]
+
+
+def test_ships_of_a_lineup_are_found_on_the_dock_by_level_and_portrait():
+    """
+    Hatakaze and Gangut out of the fleets, in the lineup of D3, not followed yet.
+    """
+    moods = ShipMoods(Config())
+    moods.unknown = {'Event2': [{'fleet': index // SLOTS_PER_FLEET + 1, 'level': level, 'sig': sig}
+                                for index, (level, sig) in enumerate(lineup_slots(load('lineup.png')))]}
+    image = load('picker.png')
+    cards = [card for card in read_picker_row(image, 76, 0) + read_picker_row(image, 303, 1) if card.name]
+    for found in cards:
+        found.fleet = 0
+
+    assert sorted(learn_lineup_ships(moods, cards, NOW)) == ['Gangut', 'Hatakaze']
+
+    assert moods.lineups == {'Event2': {'1': ['Hatakaze'], '2': ['Gangut']}}
+    assert len(moods.unknown['Event2']) == 10
+    hatakaze = moods.ships['Hatakaze']
+    assert (hatakaze.mood, hatakaze.time, hatakaze.place, hatakaze.level, hatakaze.fleet) == \
+           (150, NOW, 'dock', 119, 0)
+
+
+def test_picker_reads_on_while_other_ships_are_low_on_mood():
+    residents = ['Hatakaze']
+    cards = {c.index: c for c in [
+        card(0, '', remove=True), card(1, 'Hatakaze', fleet=1), card(2, 'London', fleet=2, mood=90),
+        card(3, 'Dmitri Dons', mood=96), card(4, 'Random', mood=110)]}
+    assert picker_fleets_ended(cards, residents)
+    assert not picker_low_mood_ended(cards, residents)
+
+    cards[5] = card(5, 'Another', mood=119)
+    assert picker_low_mood_ended(cards, residents)

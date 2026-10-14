@@ -2,19 +2,23 @@
 Who is in the lineup of a stage that has its own, like hard mode.
 The fleet selection of the stage shows portraits and levels but no names, the ships are matched with those
 followed by module/mood/ship.py: by level, then by the colors of their portraits.
+Ships of the lineup not followed yet are kept by level and portrait, the task DormRest finds them on the dock.
 """
 from module.base.button import Button
 from module.base.utils import crop
 from module.logger import logger
 from module.map.lineup_rotation import SLOTS_PER_FLEET, lineup_slot
-from module.mood.ship import ShipMoods, portrait_signature, portrait_similarity
+from module.mood.ship import DOCK_SPEED, ShipMood, ShipMoods, name_key, portrait_signature, portrait_similarity
 from module.ocr.ocr import Digit
 
-# A ship without a portrait to compare scores this
-SIMILARITY_UNKNOWN = 0.4
+# Portraits of a ship on two screens are this similar at least, see portrait_similarity().
+# Different ships go up to 0.77 for two destroyers of a class, the best match is taken first.
+PORTRAIT_MIN = 0.5
 # Bonus of the exact level over a level off by one, the ship may have leveled up since she was read
 SAME_LEVEL = 0.2
-MATCH_MIN = 0.3
+# A card of the dock taken for a ship of a lineup not followed yet, among the many ships of the dock.
+# The same ship scored 0.86 and 0.94, others 0.69 at most.
+CARD_PORTRAIT_MIN = 0.75
 
 
 def level_area(slot):
@@ -34,6 +38,39 @@ def portrait_area(slot):
     return x1 - 36, y1 - 13, x2, y2 + 25
 
 
+def match_portraits(slots, candidates, minimum):
+    """
+    Args:
+        slots (list[tuple[int, list[int]]]): Level and portrait signature of each slot, level 0 if empty.
+        candidates (list[tuple[Any, int, list[int]]]): Key, level and portrait signature of each candidate.
+        minimum (float): Similarity of portraits needed.
+
+    Returns:
+        list: Key of the candidate in each slot, None if empty or not matched.
+            Same level or one apart, best matches first, a candidate is in one slot only.
+    """
+    pairs = []
+    for index, (level, signature) in enumerate(slots):
+        if level <= 0:
+            continue
+        for key, candidate_level, candidate_signature in candidates:
+            if not candidate_level or abs(candidate_level - level) > 1:
+                continue
+            similarity = portrait_similarity(signature, candidate_signature)
+            if similarity < minimum:
+                continue
+            score = similarity + (SAME_LEVEL if candidate_level == level else 0.)
+            pairs.append((score, index, key))
+
+    keys = [None] * len(slots)
+    used = set()
+    for score, index, key in sorted(pairs, key=lambda pair: -pair[0]):
+        if keys[index] is None and key not in used:
+            keys[index] = key
+            used.add(key)
+    return keys
+
+
 def match_lineup(slots, ships):
     """
     Args:
@@ -43,27 +80,63 @@ def match_lineup(slots, ships):
     Returns:
         list[str]: Name for each slot, None if empty or not matched.
     """
-    pairs = []
-    for index, (level, signature) in enumerate(slots):
-        if level <= 0:
-            continue
-        for ship in ships:
-            if not ship.level or abs(ship.level - level) > 1:
-                continue
-            score = portrait_similarity(signature, ship.sig) if ship.sig else SIMILARITY_UNKNOWN
-            if ship.level == level:
-                score += SAME_LEVEL
-            pairs.append((score, index, ship.name))
+    return match_portraits(slots, [(ship.name, ship.level, ship.sig) for ship in ships], PORTRAIT_MIN)
 
-    names = [None] * len(slots)
-    used = set()
-    for score, index, name in sorted(pairs, key=lambda pair: -pair[0]):
-        if score < MATCH_MIN:
-            break
-        if names[index] is None and name not in used:
-            names[index] = name
-            used.add(name)
-    return names
+
+def learn_lineup_ships(moods, cards, now):
+    """
+    Ships of a lineup out of the dorm and of the fleets are known by level and portrait only, see record_lineup().
+    The picker of the dorm lists them after the ships in fleets, lowest mood first, once battles lowered it.
+
+    Args:
+        moods (ShipMoods):
+        cards (list[PickerCard]): Cards of the picker, `ship` is set on those of the ships followed.
+        now (datetime):
+
+    Returns:
+        list[str]: Names of the ships found.
+    """
+    assigned = {card.ship for card in cards if card.ship}
+    free = {card.index: card for card in cards
+            if not card.remove and not card.ship and not card.fleet and not card.submarine
+            and card.level and card.sig and len(name_key(card.name)) >= 2}
+    found = []
+    for task in list(moods.unknown):
+        slots = moods.unknown[task]
+        keys = match_portraits([(slot['level'], slot['sig']) for slot in slots],
+                               [(index, card.level, card.sig) for index, card in free.items()], CARD_PORTRAIT_MIN)
+        remaining = []
+        for slot, key in zip(slots, keys):
+            if key is None:
+                remaining.append(slot)
+                continue
+            card = free[key]
+            if not card.ship:
+                known = moods.ships.get(card.name)
+                if known is not None and known.name in assigned:
+                    # Another card is that ship, two of the same name
+                    remaining.append(slot)
+                    continue
+                # A ship of that name out of the dorm and of the fleets is her
+                if known is None:
+                    known = ShipMood(name=card.name)
+                    moods.ships[card.name] = known
+                known.mood, known.time, known.place, known.speed = card.mood, now, 'dock', DOCK_SPEED
+                # The portrait of the lineup matches best on the next sortie
+                known.level, known.fleet, known.sig = card.level, 0, known.sig or slot['sig']
+                card.ship = known.name
+                assigned.add(known.name)
+                found.append(known.name)
+            names = moods.lineups.setdefault(task, {}).setdefault(str(slot['fleet']), [])
+            if card.ship not in names:
+                names.append(card.ship)
+            logger.info(f'Lineup of {task}: fleet {slot["fleet"]} has {card.ship}, Lv.{card.level}, '
+                        f'mood {card.mood}, found on the dock')
+        if remaining:
+            moods.unknown[task] = remaining
+        else:
+            moods.unknown.pop(task)
+    return found
 
 
 def task_moods(main):
@@ -98,9 +171,10 @@ def forget_lineup(main):
     if moods is None:
         return
     task = getattr(main.config.task, 'command', '')
-    if task in moods.lineups:
+    if task in moods.lineups or task in moods.unknown:
         logger.info(f'Stage of {task} uses the common fleets, its lineup is forgotten')
-        moods.lineups.pop(task)
+        moods.lineups.pop(task, None)
+        moods.unknown.pop(task, None)
         moods.save()
 
 
@@ -121,9 +195,6 @@ def record_lineup(main):
     moods = task_moods(main)
     if moods is None:
         return False
-    if not moods.ships:
-        logger.info('No ship known yet, the task DormRest reads them in the dorm')
-        return False
 
     image = main.device.image
     slots = [lineup_slot(fleet, position) for fleet in (1, 2) for position in range(SLOTS_PER_FLEET)]
@@ -132,21 +203,26 @@ def record_lineup(main):
     signatures = [portrait_signature(crop(image, portrait_area(slot))) for slot in slots]
     names = match_lineup(list(zip(levels, signatures)), list(moods.ships.values()))
 
-    lineup = {}
-    known = True
-    for fleet in (1, 2):
-        part = slice((fleet - 1) * SLOTS_PER_FLEET, fleet * SLOTS_PER_FLEET)
-        fleet_names = [name for level, name in zip(levels[part], names[part]) if level > 0]
-        if any(name is None for name in fleet_names):
-            # Ships out of the dorm and of the fleets are not known, they are left out
-            known = False
-            logger.warning(f'Lineup fleet {fleet}: ships at levels {levels[part]} are not all known, '
-                           f'matched {names[part]}')
-        lineup[str(fleet)] = [name for name in fleet_names if name is not None]
+    lineup, unknown = {}, []
+    for index, (level, signature, name) in enumerate(zip(levels, signatures, names)):
+        fleet = index // SLOTS_PER_FLEET + 1
+        names_of_fleet = lineup.setdefault(str(fleet), [])
+        if level <= 0:
+            continue
+        if name is None:
+            unknown.append({'fleet': fleet, 'level': level, 'sig': signature})
+        else:
+            names_of_fleet.append(name)
 
     task = getattr(config.task, 'command', '')
     logger.attr('Lineup', f'{task} {lineup}')
-    if moods.lineups.get(task) != lineup:
-        moods.lineups[task] = lineup
-        moods.save()
-    return known
+    moods.lineups[task] = lineup
+    if unknown:
+        # Out of the dorm and of the fleets, the task DormRest finds them on the dock once they are low on mood
+        logger.info(f'Lineup ships not followed yet, fleet and level: '
+                    f'{[(slot["fleet"], slot["level"]) for slot in unknown]}')
+        moods.unknown[task] = unknown
+    else:
+        moods.unknown.pop(task, None)
+    moods.save()
+    return not unknown

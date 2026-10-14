@@ -5,7 +5,8 @@ The dorm is also where the game shows mood exactly, every ship read here is foll
 The ship list of the dorm has a tab for each floor, Train for the first floor and Rest for the second.
 A card of the Rest tab opens a picker: a dock that lists the ships of the second floor first, then those
 of the first floor, then the ships in fleets, then all others. Sorted by mood, the ships in fleets come
-lowest mood first. The ships selected there rest on the second floor once confirmed.
+lowest mood first, then the others lowest mood first. The ships selected there rest on the second floor
+once confirmed.
 """
 import re
 from dataclasses import dataclass
@@ -21,9 +22,10 @@ from module.base.utils import color_similar, crop, get_color
 from module.combat.level import LevelOcr
 from module.logger import logger
 from module.mood.assets import *
+from module.mood.lineup import learn_lineup_ships
 from module.mood.plan import rest_plan, upcoming_jobs
-from module.mood.ship import DOCK_SPEED, ShipMood, ShipMoods, name_key, name_similarity, portrait_signature, \
-    tidy_name
+from module.mood.ship import DOCK_MOOD_MAX, DOCK_SPEED, ShipMood, ShipMoods, name_key, name_similarity, \
+    portrait_signature, tidy_name
 from module.ocr.ocr import Digit, DigitCounter, Ocr
 from module.retire.assets import DOCK_CHECK, TEMPLATE_FLEET_1, TEMPLATE_FLEET_2, TEMPLATE_FLEET_3, \
     TEMPLATE_FLEET_4, TEMPLATE_FLEET_5, TEMPLATE_FLEET_6
@@ -361,7 +363,7 @@ def is_selected(image, x, top):
         > SELECTED_SIMILARITY
 
 
-def picker_fleets_ended(cards, residents):
+def picker_fleets_end(cards, residents):
     """
     Ships in no fleet come after the ships in fleets. Two in a row out of the dorm and of any fleet,
     a badge may be missed on a card.
@@ -369,8 +371,11 @@ def picker_fleets_ended(cards, residents):
     Args:
         cards (dict[int, PickerCard]): By index.
         residents (list[str]): Names of the ships in the dorm.
+
+    Returns:
+        int: Index of the first card after the ships in fleets, None if not read yet.
     """
-    streak = 0
+    streak, start = 0, None
     for index in sorted(cards):
         card = cards[index]
         if card.remove or any(name_similarity(card.name, name) > 0 for name in residents):
@@ -378,10 +383,31 @@ def picker_fleets_ended(cards, residents):
         if card.fleet:
             streak = 0
         else:
+            if streak == 0:
+                start = index
             streak += 1
             if streak >= 2:
-                return True
-    return False
+                return start
+    return None
+
+
+def picker_fleets_ended(cards, residents):
+    return picker_fleets_end(cards, residents) is not None
+
+
+def picker_low_mood_ended(cards, residents):
+    """
+    After the ships in fleets, the others come lowest mood first. Those below what the dock recovers to
+    fought lately, like ships in the lineup of a stage. They end with a ship at that mood.
+
+    Args:
+        cards (dict[int, PickerCard]): By index.
+        residents (list[str]): Names of the ships in the dorm.
+    """
+    end = picker_fleets_end(cards, residents)
+    if end is None:
+        return False
+    return any(card.mood >= DOCK_MOOD_MAX for index, card in cards.items() if index >= end and not card.remove)
 
 
 def update_moods(moods, dorm, cards, now):
@@ -434,10 +460,29 @@ def update_moods(moods, dorm, cards, now):
         known.level, known.fleet = card.level or known.level, card.fleet
         known.sig = known.sig or card.sig
 
+    # Ships in no fleet read after the ships in fleets, like ships of a lineup once they are low on mood
+    taken = {card.ship for card in cards if card.ship} | in_dorm
+    for card in cards:
+        if card.remove or card.ship or card.fleet or card.submarine or len(name_key(card.name)) < 2:
+            continue
+        known = moods.find(card.name)
+        if known is None or known.name in taken:
+            continue
+        # Levels do not go down, a ship below is another of a similar name, like Nevada and Nevada META
+        if card.level and known.level and card.level < known.level - 1:
+            continue
+        card.ship = known.name
+        taken.add(known.name)
+        known.mood, known.time, known.place, known.speed = card.mood, now, 'dock', DOCK_SPEED
+        known.level, known.fleet = card.level or known.level, 0
+        known.sig = known.sig or card.sig
+    # Those not followed yet, known by level and portrait
+    learn_lineup_ships(moods, cards, now)
+
     # Ships not seen are out of the dorm and of the fleets, they may still be in the lineup of a stage.
     # They are forgotten after a while.
     seen = {card.ship for card in cards if card.ship} | in_dorm
-    in_lineups = {name for lineup in moods.lineups.values() for names in lineup.values() for name in names}
+    in_lineups = moods.in_lineups()
     for name in list(moods.ships):
         if name in seen:
             continue
@@ -626,12 +671,14 @@ class DormRest(Dock):
         self.device.screenshot()
         return 0, picker_row_tops(self.device.image)
 
-    def picker_scan(self, residents):
+    def picker_scan(self, residents, low_mood=False):
         """
         Read the cards of the picker: the dorm residents, then the ships in fleets, by mood lowest first.
 
         Args:
             residents (list[str]): Names of the ships in the dorm, both floors.
+            low_mood (bool): Read on the other ships that are low on mood, after the ships in fleets.
+                Ships in the lineup of a stage are among them.
 
         Returns:
             list[PickerCard]:
@@ -656,7 +703,11 @@ class DormRest(Dock):
                     continue
                 self._picker_rows[row] = read_picker_row(image, top, row)
             cards = {card.index: card for row in self._picker_rows.values() for card in row}
-            if picker_fleets_ended(cards, residents) or len(self._picker_rows) >= PICKER_MAX_ROWS:
+            if low_mood:
+                ended = picker_low_mood_ended(cards, residents)
+            else:
+                ended = picker_fleets_ended(cards, residents)
+            if ended or len(self._picker_rows) >= PICKER_MAX_ROWS:
                 break
             # Less than two rows, the first row on screen after it is one read already
             offset, tops = self.picker_scroll(offset, rows=1.5)
@@ -788,7 +839,9 @@ class DormRest(Dock):
 
         self.picker_enter()
         residents = [ship.name for ship in train + rest]
-        cards = self.picker_scan(residents)
+        # Ships of a lineup in no fleet are read with the others low on mood
+        lineup_only = [name for name in moods.in_lineups() if name in moods.ships and not moods.ships[name].fleet]
+        cards = self.picker_scan(residents, low_mood=bool(moods.unknown or lineup_only))
         now = datetime.now().replace(microsecond=0)
         update_moods(moods, train + rest, cards, now)
         # Selected on the picker: the ships of the second floor, but the one whose card opened it
@@ -800,7 +853,10 @@ class DormRest(Dock):
                 card.selected = card.ship in selected
 
         jobs = upcoming_jobs(self.config.data, moods)
+        # Ships whose card was not read can not be selected, like those of a lineup not low on mood
+        on_picker = {card.ship for card in cards if card.ship}
         for job in jobs:
+            job.names = [name for name in job.names if name in on_picker]
             logger.info(f'Task {job.task}: {job.names}, weight {job.weight}')
         rest_names = [moods.find(ship.name).name for ship in rest]
         train_names = [moods.find(ship.name).name for ship in train]

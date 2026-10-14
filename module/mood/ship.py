@@ -224,7 +224,9 @@ class ShipMoods:
         {
             'read': when the dorm was read last,
             'ships': {name: ShipMood.to_dict()},
-            'lineups': {task: {'1': [names], '2': [names]}}, lineups of hard mode stages
+            'lineups': {task: {'1': [names], '2': [names]}}, lineups of stages that have their own,
+            'unknown': {task: [{'fleet': 1, 'level': 100, 'sig': [...]}]}, ships of those lineups
+                not followed yet, known by level and portrait only
         }
     """
     KEYS = 'DormRest.Storage.Storage'
@@ -240,12 +242,14 @@ class ShipMoods:
         self.ships: Dict[str, ShipMood] = {
             name: ShipMood.from_dict(name, ship) for name, ship in data.get('ships', {}).items()}
         self.lineups: Dict[str, Dict[str, List[str]]] = data.get('lineups', {}) or {}
+        self.unknown: Dict[str, List[dict]] = data.get('unknown', {}) or {}
 
     def to_dict(self):
         return {
             'read': self.read.strftime(TIME_FORMAT) if self.read else '',
             'ships': {name: ship.to_dict() for name, ship in self.ships.items()},
             'lineups': self.lineups,
+            'unknown': self.unknown,
         }
 
     def save(self):
@@ -286,6 +290,13 @@ class ShipMoods:
             list[str]: Names of the ships in a fleet of the lineup of a stage, those followed.
         """
         return [name for name in self.lineups.get(task, {}).get(str(index), []) if name in self.ships]
+
+    def in_lineups(self):
+        """
+        Returns:
+            set[str]: Names of the ships in the lineup of any stage.
+        """
+        return {name for lineup in self.lineups.values() for names in lineup.values() for name in names}
 
     def ships_of(self, names):
         return [self.ships[name] for name in names if name in self.ships]

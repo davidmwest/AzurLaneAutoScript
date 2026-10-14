@@ -105,6 +105,7 @@ def test_ships_are_saved_and_read_back():
     moods.ships['Oite'] = ShipMood('Oite', mood=123, time=T0, place='rest', speed=50, level=119, fleet=1,
                                    sig=[1, 2, 3])
     moods.lineups['Event2'] = {'1': ['Oite'], '2': []}
+    moods.unknown['Event2'] = [{'fleet': 2, 'level': 100, 'sig': [4, 5, 6]}]
     moods.read = T0
     moods.save()
 
@@ -112,6 +113,8 @@ def test_ships_are_saved_and_read_back():
 
     assert again.ships['Oite'] == moods.ships['Oite']
     assert again.lineups == {'Event2': {'1': ['Oite'], '2': []}}
+    assert again.unknown == {'Event2': [{'fleet': 2, 'level': 100, 'sig': [4, 5, 6]}]}
+    assert again.in_lineups() == {'Oite'}
     assert again.read == T0
 
 
