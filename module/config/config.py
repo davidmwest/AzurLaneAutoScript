@@ -45,6 +45,24 @@ class Function:
             return False
 
 
+class LogSummary:
+    """
+    A value too long to log, like a storage of many records, is logged as what it is and how many items it has.
+    """
+
+    def __init__(self, value):
+        self.value = value
+
+    def __repr__(self):
+        return f'<{type(self.value).__name__} of {len(self.value)}>'
+
+
+def log_value(value, limit=300):
+    if isinstance(value, (dict, list)) and len(repr(value)) > limit:
+        return LogSummary(value)
+    return value
+
+
 def name_to_function(name):
     """
     Args:
@@ -270,7 +288,8 @@ class AzurLaneConfig(ConfigUpdater, ManualConfig, GeneratedConfig, ConfigWatcher
             deep_set(self.data, keys=path, value=value)
 
         logger.info(
-            f"Save config {filepath_config(self.config_name, mod_name)}, {dict_to_kv(self.modified)}"
+            f"Save config {filepath_config(self.config_name, mod_name)}, "
+            f"{dict_to_kv({key: log_value(value) for key, value in self.modified.items()})}"
         )
         # Don't use self.modified = {}, that will create a new object.
         self.modified.clear()

@@ -4,7 +4,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from module.config.config import AzurLaneConfig
+from module.config.config import AzurLaneConfig, LogSummary, log_value
+from module.config.utils import dict_to_kv
 
 DAILIES = ['Commission', 'Research', 'Reward']
 
@@ -64,3 +65,12 @@ def test_dailies_can_be_switched_off(task):
     assert enable['type'] == 'checkbox'
     assert enable['value'] is True
     assert False in enable['option']
+
+
+def test_long_values_are_summed_up_in_the_log():
+    storage = {'ships': {f'Ship {i}': {'mood': 150, 'sig': list(range(144))} for i in range(30)}}
+
+    text = dict_to_kv({'DormRest.Storage.Storage': log_value(storage), 'Main.Emotion.Fleet1Value': log_value(119)})
+
+    assert isinstance(log_value(storage), LogSummary)
+    assert text == "DormRest.Storage.Storage=<dict of 1>, Main.Emotion.Fleet1Value=119"
