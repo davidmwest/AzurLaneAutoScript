@@ -266,6 +266,20 @@ class Emotion:
                 logger.attr('Wait until', recovered)
                 sleep(60)
 
+    def set_exhausted(self, fleet_index):
+        """
+        The game says the mood of a fleet is too low to attack, whatever has been calculated.
+        Count it as 0, so it is given the time to recover.
+
+        Args:
+            fleet_index (int): 1 or 2.
+        """
+        logger.hr('Emotion exhausted')
+        self.update()
+        self.fleets[fleet_index - 1].current = 0
+        self.record()
+        self.show()
+
     def reduce(self, fleet_index):
         """
         Reduce emotion of specific fleet.

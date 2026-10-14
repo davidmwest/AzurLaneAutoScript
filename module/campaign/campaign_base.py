@@ -1,15 +1,69 @@
 from module.base.decorator import Config, cached_property
 from module.campaign.campaign_ui import CampaignUI
+from module.combat.assets import BATTLE_PREPARATION
 from module.combat.auto_search_combat import AutoSearchCombat
 from module.exception import CampaignEnd, MapEnemyMoved, ScriptError
 from module.logger import logger
+from module.map.assets import FLEET_PREPARATION, MAP_PREPARATION, MAP_PREPARATION_HARD
 from module.map.map import Map
 from module.map.map_base import CampaignMap
+from module.ui.assets import BACK_ARROW
 
 
 class CampaignBase(CampaignUI, Map, AutoSearchCombat):
     FUNCTION_NAME_BASE = 'battle_'
     MAP: CampaignMap
+
+    def handle_combat_low_emotion(self):
+        """
+        The game warns that the mood of a ship is so low she loses affinity if she attacks.
+
+        With emotion ignored, attack anyway. With emotion calculated, the calculation is off,
+        the ships fought where Alas did not count it, in another task or by hand.
+        Cancel, count the fleet as exhausted so the task waits for it to recover, and leave the map.
+
+        Returns:
+            bool: If handled, with emotion ignored.
+
+        Raises:
+            CampaignEnd: After leaving the map, with emotion calculated.
+        """
+        if self.emotion.is_ignore:
+            return super().handle_combat_low_emotion()
+        if not self.handle_popup_cancel('LOW_EMOTION'):
+            return False
+
+        fleet = getattr(self, 'fleet_current_index', 1)
+        logger.warning(f'Mood of fleet {fleet} is lower than calculated')
+        self.emotion.set_exhausted(fleet)
+        self.emotion_withdraw()
+        raise CampaignEnd('Emotion withdraw')
+
+    def emotion_withdraw(self):
+        """
+        Leave the map, or the preparation of a battle or of the map.
+        """
+        logger.hr('Emotion withdraw')
+        for _ in self.loop(skip_first=False):
+            if self.handle_story_skip():
+                continue
+            if self.handle_popup_cancel('LOW_EMOTION'):
+                continue
+            if self.appear(BATTLE_PREPARATION, offset=(20, 20), interval=2):
+                self.device.click(BACK_ARROW)
+                continue
+            if self.handle_auto_search_exit():
+                continue
+            if self.is_in_stage():
+                break
+            if self.is_in_map():
+                self.withdraw()
+                break
+            if self.appear(FLEET_PREPARATION, offset=(20, 50), interval=2) \
+                    or self.appear(MAP_PREPARATION, offset=(20, 20), interval=2) \
+                    or self.appear(MAP_PREPARATION_HARD, offset=(20, 20), interval=2):
+                self.enter_map_cancel()
+                break
 
     def battle_default(self):
         if self.clear_enemy():

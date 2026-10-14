@@ -150,6 +150,14 @@ class AzurLaneAutoScript:
         except Exception as e:
             logger.exception(e)
             self.save_error_log()
+            if self.config.Error_KeepRunning:
+                # Whatever it was, a restart of the game is where every task can start from.
+                # A task that keeps failing like this is put off by the scheduler.
+                logger.warning(f'{self.device.package} will be restarted in 10 seconds')
+                logger.warning('If you are playing by hand, please stop Alas')
+                self.config.task_call('Restart')
+                self.device.sleep(10)
+                return False
             handle_notify(
                 self.config.Error_OnePushConfig,
                 title=f"Alas <{self.config_name}> crashed",
