@@ -1,5 +1,6 @@
+from datetime import datetime, timedelta
 from types import SimpleNamespace
-from unittest.mock import Mock
+from unittest.mock import Mock, call
 
 import pytest
 
@@ -92,17 +93,52 @@ def test_unexpected_error_ends_alas_without_keep_running(monkeypatch):
 def test_scheduler_does_not_wait_without_a_pause(monkeypatch):
     sleep = Mock()
     monkeypatch.setattr(alas.time, 'sleep', sleep)
+    write_state = Mock()
+    monkeypatch.setattr(alas, 'write_scheduler_state', write_state)
 
     assert AzurLaneAutoScript.wait_while_paused(make_scheduler(paused_checks=0)) is False
 
     sleep.assert_not_called()
+    write_state.assert_not_called()
 
 
 def test_scheduler_waits_until_the_pause_is_over(monkeypatch):
     sleep = Mock()
     monkeypatch.setattr(alas.time, 'sleep', sleep)
+    write_state = Mock()
+    monkeypatch.setattr(alas, 'write_scheduler_state', write_state)
 
     # Found at the first look, and on 3 more looks while waiting
     assert AzurLaneAutoScript.wait_while_paused(make_scheduler(paused_checks=4)) is True
 
     assert sleep.call_count == 3
+    # Tells the GUI it holds, then that it goes on
+    assert write_state.call_args_list == [call('alas', paused=True), call('alas')]
+
+
+def test_waiting_for_the_next_task_ends_for_a_pause(monkeypatch):
+    sleep = Mock()
+    monkeypatch.setattr(alas.time, 'sleep', sleep)
+    config = SimpleNamespace(start_watching=Mock(), should_reload=lambda: False, pause_requested=True)
+    scheduler = SimpleNamespace(config=config, config_name='alas', stop_event=None)
+
+    # Not after 3 hours of waiting for oil
+    assert AzurLaneAutoScript.wait_until(scheduler, datetime.now() + timedelta(hours=3)) is False
+    assert sleep.call_count == 1
+
+
+def test_next_task_holds_while_paused_first(monkeypatch):
+    import module.base.resource
+    monkeypatch.setattr(module.base.resource, 'release_resources', Mock())
+    calls = []
+    task = SimpleNamespace(command='Event2', next_run=datetime.now() - timedelta(minutes=1))
+
+    def get_next():
+        calls.append('get_next')
+        return task
+
+    config = SimpleNamespace(get_next=get_next, bind=Mock(), task=None)
+    scheduler = SimpleNamespace(config=config, wait_while_paused=lambda: calls.append('hold'))
+
+    assert AzurLaneAutoScript.get_next_task(scheduler) == 'Event2'
+    assert calls == ['hold', 'get_next']

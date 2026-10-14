@@ -1,3 +1,4 @@
+import atexit
 import os
 import re
 import threading
@@ -10,6 +11,7 @@ from cached_property import cached_property
 from module.base.decorator import del_cached_property
 from module.config.config import AzurLaneConfig, TaskEnd
 from module.config.deep import deep_get, deep_set
+from module.config.scheduler_state import remove_scheduler_state, write_scheduler_state
 from module.config.utils import filepath_pause
 from module.exception import *
 from module.logger import logger
@@ -504,7 +506,7 @@ class AzurLaneAutoScript:
             future (datetime):
 
         Returns:
-            bool: True if wait finished, False if config changed.
+            bool: True if wait finished, False if config changed or a pause is requested.
         """
         future = future + timedelta(seconds=1)
         self.config.start_watching()
@@ -520,6 +522,9 @@ class AzurLaneAutoScript:
             time.sleep(5)
 
             if self.config.should_reload():
+                return False
+            # Hold now, not when the next task is due, someone may be playing already
+            if self.config.pause_requested:
                 return False
 
     def put_off_failed_task(self, task):
@@ -563,11 +568,13 @@ class AzurLaneAutoScript:
 
         logger.hr('Paused', level=1)
         logger.info(f'Scheduler is paused, delete {filepath_pause(self.config_name)} to continue')
+        write_scheduler_state(self.config_name, paused=True)
         while self.config.pause_requested:
             if self.stop_event is not None and self.stop_event.is_set():
                 break
             time.sleep(2)
         logger.info('Scheduler continues')
+        write_scheduler_state(self.config_name)
         # Config may have been edited during the pause
         del_cached_property(self, 'config')
         return True
@@ -578,6 +585,8 @@ class AzurLaneAutoScript:
             str: Name of the next task.
         """
         while 1:
+            # A pause may come while waiting for the next task
+            self.wait_while_paused()
             task = self.config.get_next()
             self.config.task = task
             self.config.bind(task)
@@ -597,6 +606,10 @@ class AzurLaneAutoScript:
                     self.device.release_during_wait()
                     if not self.wait_until(task.next_run):
                         del_cached_property(self, 'config')
+                        if self.config.pause_requested and task.command != 'Restart':
+                            # The game is closed, start it again once the pause is over
+                            self.config.task_call('Restart')
+                            del_cached_property(self, 'config')
                         continue
                     if task.command != 'Restart':
                         self.config.task_call('Restart')
@@ -632,6 +645,9 @@ class AzurLaneAutoScript:
     def loop(self):
         logger.set_file_logger(self.config_name)
         logger.info(f'Start scheduler loop: {self.config_name}')
+        # Let the GUI know, wherever this scheduler was started from
+        write_scheduler_state(self.config_name)
+        atexit.register(remove_scheduler_state, self.config_name)
 
         while 1:
             # Check update event from GUI
@@ -666,11 +682,13 @@ class AzurLaneAutoScript:
 
             # Run
             logger.info(f'Scheduler: Start task `{task}`')
+            write_scheduler_state(self.config_name, task=task)
             self.device.stuck_record_clear()
             self.device.click_record_clear()
             logger.hr(task, level=0)
             success = self.run(inflection.underscore(task))
             logger.info(f'Scheduler: End task `{task}`')
+            write_scheduler_state(self.config_name)
             self.is_first_task = False
 
             # Check failures

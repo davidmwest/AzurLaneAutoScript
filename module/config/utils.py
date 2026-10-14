@@ -69,6 +69,14 @@ def filepath_pause(filename):
     return os.path.join('./config', f'{filename}.pause')
 
 
+def filepath_running(filename):
+    """
+    The scheduler of config `filename` tells what it is doing in this file while it runs,
+    see module/config/scheduler_state.py
+    """
+    return os.path.join('./config', f'{filename}.running')
+
+
 def filepath_code():
     return './module/config/config_generated.py'
 
