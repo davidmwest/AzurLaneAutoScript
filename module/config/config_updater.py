@@ -473,8 +473,8 @@ class ConfigGenerator:
     @staticmethod
     def generate_deploy_template():
         template = poor_yaml_read(DEPLOY_TEMPLATE)
+        # The mirror of Alas in China does not have Purin, stay on the repository of Purin
         cn = {
-            'Repository': 'git://git.lyoko.io/AzurLaneAutoScript',
             'PypiMirror': 'https://mirrors.aliyun.com/pypi/simple',
             'Language': 'zh-CN',
         }
