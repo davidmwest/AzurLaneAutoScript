@@ -864,7 +864,12 @@ class DormRest(Dock):
         logger.attr('Rest now', rest_names)
         logger.attr('Rest plan', plan)
 
-        changed = self.picker_apply(cards, plan)
+        if set(plan) == set(rest_names):
+            # The ship whose card opened the picker shows unselected, cancelling keeps her
+            logger.info('Second floor of the dorm stays as it is')
+            changed = False
+        else:
+            changed = self.picker_apply(cards, plan)
         self.dock_filter_set(sort='level')
         self.dock_sort_method_dsc_set(True)
         self.picker_confirm(DORM_PICKER_CONFIRM if changed else DORM_PICKER_CANCEL)
