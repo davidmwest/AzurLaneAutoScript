@@ -2058,6 +2058,10 @@
       "name": "MedalShop.Filter.name",
       "help": "MedalShop.Filter.help"
     },
+    "Reserve": {
+      "name": "最初の品物のために残す勲章",
+      "help": "フィルターの最初の品物だけが使える勲章です。例えば毎月初めに入荷する金色のブリ（BulinT2）。それ以外の品物は、この数を超えた分の勲章で購入します。0 ならすべて使います"
+    },
     "RETROFIT_T1": {
       "name": "MedalShop.RETROFIT_T1.name",
       "help": "MedalShop.RETROFIT_T1.help",

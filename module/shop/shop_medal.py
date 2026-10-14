@@ -1,3 +1,5 @@
+import re
+
 import cv2
 import numpy as np
 from scipy import signal
@@ -11,7 +13,7 @@ from module.logger import logger
 from module.map_detection.utils import Points
 from module.ocr.ocr import Digit, DigitYuv, Ocr
 from module.shop.assets import *
-from module.shop.base import ShopItemGrid_250814
+from module.shop.base import FILTER, ShopItemGrid_250814
 from module.shop.clerk import ShopClerk
 from module.shop.shop_status import ShopStatus
 from module.ui.scroll import Scroll, best_interval, best_window
@@ -259,6 +261,30 @@ class MedalShop2_250814(ShopClerk, ShopStatus):
         self._currency = self.status_get_medal()
         logger.info(f'Medal: {self._currency}')
         return self._currency
+
+    def shop_is_first_choice(self, item):
+        """
+        Returns:
+            bool: If the item is what the first selector of the filter asks for
+        """
+        first = re.sub(r'[ \t\r\n]', '', self.shop_filter).split('>')[0]
+        return bool(first) and FILTER.apply_filter_to_obj(obj=item, filter=FILTER.parse_filter(first))
+
+    def shop_spendable(self, item):
+        """
+        Medals in MedalShop2.Reserve are kept for the first item of the filter,
+        like golden bulins that come back at the start of every month.
+
+        Returns:
+            int: Medals that can be spent on this item
+        """
+        reserve = max(int(self.config.MedalShop2_Reserve or 0), 0)
+        if reserve and not self.shop_is_first_choice(item):
+            return max(self._currency - reserve, 0)
+        return self._currency
+
+    def shop_check_item(self, item):
+        return item.price <= self.shop_spendable(item)
 
     def shop_has_loaded(self, items):
         """

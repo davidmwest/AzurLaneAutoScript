@@ -9391,6 +9391,10 @@
         "type": "textarea",
         "value": "DR > PR\n> BookRedT3 > BookYellowT3 > BookBlueT3\n> BookRedT2 > BookYellowT2 > BookBlueT2\n> RetrofitT3\n> FoodT6 > FoodT5\n> PlateGeneralT3 > PlateWildT3"
       },
+      "Reserve": {
+        "type": "input",
+        "value": 0
+      },
       "RETROFIT_T1": {
         "type": "select",
         "value": "cl",

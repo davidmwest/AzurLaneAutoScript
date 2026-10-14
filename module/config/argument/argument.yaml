@@ -577,6 +577,7 @@ MedalShop2:
     > RetrofitT3
     > FoodT6 > FoodT5
     > PlateGeneralT3 > PlateWildT3
+  Reserve: 0
   RETROFIT_T1:
     value: cl
     option: [ dd, cl, bb, cv ]

@@ -204,6 +204,19 @@ class ShopClerk(ShopBase, Retirement):
         self.device.click(SHOP_BUY_CONFIRM_SELECT)
         return True
 
+    def shop_spendable(self, item):
+        """
+        Override in variant class
+        to keep some currency back
+
+        Args:
+            item (Item):
+
+        Returns:
+            int: Currency that can be spent on this item
+        """
+        return self._currency
+
     def shop_buy_amount_execute(self, item):
         """
         Args:
@@ -245,7 +258,7 @@ class ShopClerk(ShopBase, Retirement):
             raise ScriptError
 
         # Adjust purchase amount if needed
-        total = int(self._currency // item.price)
+        total = int(self.shop_spendable(item) // item.price)
         diff = limit - total
         if diff > 0:
             limit = total

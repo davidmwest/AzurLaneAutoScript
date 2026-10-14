@@ -311,6 +311,7 @@ class GeneratedConfig:
 
     # Group `MedalShop2`
     MedalShop2_Filter = 'DR > PR\n> BookRedT3 > BookYellowT3 > BookBlueT3\n> BookRedT2 > BookYellowT2 > BookBlueT2\n> RetrofitT3\n> FoodT6 > FoodT5\n> PlateGeneralT3 > PlateWildT3'
+    MedalShop2_Reserve = 0
     MedalShop2_RETROFIT_T1 = 'cl'  # dd, cl, bb, cv
     MedalShop2_RETROFIT_T2 = 'cl'  # dd, cl, bb, cv
     MedalShop2_RETROFIT_T3 = 'cl'  # dd, cl, bb, cv
