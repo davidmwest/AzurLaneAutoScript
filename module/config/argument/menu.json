@@ -57,7 +57,9 @@
       "Meowfficer",
       "Guild",
       "Reward",
-      "Awaken"
+      "Awaken",
+      "EnhanceShips",
+      "RetireShips"
     ]
   },
   "DailyMission": {
@@ -68,6 +70,8 @@
       "Hard",
       "Exercise",
       "ShopFrequent",
+      "ShopGuild",
+      "ShopMonthly",
       "ShopOnce",
       "Shipyard",
       "Gacha",

@@ -1584,6 +1584,32 @@
       "Storage": {}
     }
   },
+  "EnhanceShips": {
+    "Scheduler": {
+      "Enable": false,
+      "NextRun": "2020-01-01 00:00:00",
+      "Command": "EnhanceShips",
+      "SuccessInterval": 30,
+      "FailureInterval": 120,
+      "ServerUpdate": "00:00"
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "RetireShips": {
+    "Scheduler": {
+      "Enable": false,
+      "NextRun": "2020-01-01 00:00:00",
+      "Command": "RetireShips",
+      "SuccessInterval": 30,
+      "FailureInterval": 120,
+      "ServerUpdate": "00:00"
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
   "Daily": {
     "Scheduler": {
       "Enable": false,
@@ -1672,18 +1698,18 @@
       "Storage": {}
     }
   },
-  "ShopOnce": {
+  "ShopGuild": {
     "Scheduler": {
       "Enable": false,
       "NextRun": "2020-01-01 00:00:00",
-      "Command": "ShopOnce",
+      "Command": "ShopGuild",
       "SuccessInterval": 30,
       "FailureInterval": 30,
       "ServerUpdate": "00:00"
     },
     "GuildShop": {
       "Refresh": true,
-      "Filter": "PlateT4 > BookT3 > PR > CatT3 > Chip > BookT2 > Retrofit > FoodT6 > FoodT5 > CatT2 > BoxT4",
+      "Filter": "PlateT4",
       "BOX_T3": "ironblood",
       "BOX_T4": "ironblood",
       "BOOK_T2": "red",
@@ -1692,10 +1718,23 @@
       "RETROFIT_T3": "cl",
       "PLATE_T2": "general",
       "PLATE_T3": "general",
-      "PLATE_T4": "gun",
+      "PLATE_T4": "general",
       "PR1": "neptune",
       "PR2": "seattle",
       "PR3": "cheshire"
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "ShopMonthly": {
+    "Scheduler": {
+      "Enable": false,
+      "NextRun": "2020-01-01 00:00:00",
+      "Command": "ShopMonthly",
+      "SuccessInterval": 30,
+      "FailureInterval": 30,
+      "ServerUpdate": "00:00"
     },
     "MedalShop2": {
       "Filter": "DR > PR\n> BookRedT3 > BookYellowT3 > BookBlueT3\n> BookRedT2 > BookYellowT2 > BookBlueT2\n> RetrofitT3\n> FoodT6 > FoodT5\n> PlateGeneralT3 > PlateWildT3",
@@ -1706,13 +1745,26 @@
       "PLATE_T2": "general",
       "PLATE_T3": "general"
     },
+    "CoreShop": {
+      "Filter": "Array"
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "ShopOnce": {
+    "Scheduler": {
+      "Enable": false,
+      "NextRun": "2020-01-01 00:00:00",
+      "Command": "ShopOnce",
+      "SuccessInterval": 30,
+      "FailureInterval": 30,
+      "ServerUpdate": "00:00"
+    },
     "MeritShop": {
       "Refresh": false,
       "BuyUnobtainedShip": false,
       "Filter": "Cube"
-    },
-    "CoreShop": {
-      "Filter": "Array"
     },
     "Storage": {
       "Storage": {}

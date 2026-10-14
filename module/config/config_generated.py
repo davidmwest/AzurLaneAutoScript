@@ -295,7 +295,7 @@ class GeneratedConfig:
 
     # Group `GuildShop`
     GuildShop_Refresh = True
-    GuildShop_Filter = 'PlateT4 > BookT3 > PR > CatT3 > Chip > BookT2 > Retrofit > FoodT6 > FoodT5 > CatT2 > BoxT4'
+    GuildShop_Filter = 'PlateT4'
     GuildShop_BOX_T3 = 'ironblood'  # eagle, royal, sakura, ironblood
     GuildShop_BOX_T4 = 'ironblood'  # eagle, royal, sakura, ironblood
     GuildShop_BOOK_T2 = 'red'  # red, blue, yellow
@@ -304,7 +304,7 @@ class GeneratedConfig:
     GuildShop_RETROFIT_T3 = 'cl'  # dd, cl, bb, cv
     GuildShop_PLATE_T2 = 'general'  # general, gun, torpedo, antiair, plane
     GuildShop_PLATE_T3 = 'general'  # general, gun, torpedo, antiair, plane
-    GuildShop_PLATE_T4 = 'gun'  # general, gun, torpedo, antiair, plane
+    GuildShop_PLATE_T4 = 'general'  # general, gun, torpedo, antiair, plane
     GuildShop_PR1 = 'neptune'  # neptune, monarch, ibuki, izumo, roon, saintlouis
     GuildShop_PR2 = 'seattle'  # seattle, georgia, kitakaze, gascogne
     GuildShop_PR3 = 'cheshire'  # cheshire, mainz, odin, champagne

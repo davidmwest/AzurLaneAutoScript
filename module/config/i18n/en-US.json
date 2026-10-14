@@ -162,6 +162,14 @@
       "name": "Awaken",
       "help": ""
     },
+    "EnhanceShips": {
+      "name": "Enhance Ships",
+      "help": "Enhances the ships of the dock that can still be enhanced, highest level first, with the materials the game recommends. Settings are in Alas, General, Enhance: which ships, and how many of each type. Runs every day, before Retire Ships"
+    },
+    "RetireShips": {
+      "name": "Retire Ships",
+      "help": "Retires ships on the retire page of the build menu, with one-click retire and the quick retire options you set in the game, or with the old retire options, as the retirement mode in Alas, General says. Nothing is retired with Do Not Retire. The quick retire options of the game are never changed. Runs every day, after Enhance Ships"
+    },
     "Daily": {
       "name": "Daily",
       "help": ""
@@ -175,12 +183,20 @@
       "help": ""
     },
     "ShopFrequent": {
-      "name": "Shop Frequent",
-      "help": ""
+      "name": "Supply Shop",
+      "help": "Buys from the supply shop after each of its restocks, at 00:00, 12:00 and 18:00 server time. What to buy is set in the filter below. Items priced in gems are bought only if Use Gems is on"
+    },
+    "ShopGuild": {
+      "name": "Guild Shop",
+      "help": "Buys from the guild shop after its daily restock. With Refresh on, it then refreshes the shop once for 50 guild coins and buys again. By default it buys golden (T4) auxiliary plates, the type of plate is chosen with PLATE_T4"
+    },
+    "ShopMonthly": {
+      "name": "Monthly Shops",
+      "help": "Buys from the monthly tab of the shop: the core data shop, then the medal shop. Their stock comes back every month, the task looks every day"
     },
     "ShopOnce": {
-      "name": "Shop Once",
-      "help": ""
+      "name": "Merit Shop",
+      "help": "Buys from the merit shop, paid with the merit of exercises. Runs every day"
     },
     "Shipyard": {
       "name": "Shipyard",

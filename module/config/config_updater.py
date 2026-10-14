@@ -550,6 +550,19 @@ class ConfigGenerator:
         self.generate_deploy_template()
 
 
+# 2026.10.14 The guild shop and the monthly shops left ShopOnce for tasks of their own, ShopOnce keeps the merit shop
+SHOP_ONCE_SPLIT = [
+    ('ShopGuild', 'GuildShop', ['Refresh', 'Filter', 'BOX_T3', 'BOX_T4', 'BOOK_T2', 'BOOK_T3', 'RETROFIT_T2',
+                                'RETROFIT_T3', 'PLATE_T2', 'PLATE_T3', 'PLATE_T4', 'PR1', 'PR2', 'PR3']),
+    ('ShopMonthly', 'MedalShop2', ['Filter', 'RETROFIT_T1', 'RETROFIT_T2', 'RETROFIT_T3',
+                                   'PLATE_T1', 'PLATE_T2', 'PLATE_T3']),
+    ('ShopMonthly', 'CoreShop', ['Filter']),
+]
+SHOP_ONCE_REDIRECTION = \
+    [('ShopOnce.Scheduler.Enable', f'{task}.Scheduler.Enable') for task in ['ShopGuild', 'ShopMonthly']] \
+    + [(f'ShopOnce.{group}.{arg}', f'{task}.{group}.{arg}') for task, group, args in SHOP_ONCE_SPLIT for arg in args]
+
+
 class ConfigUpdater:
     # source, target, (optional)convert_func
     redirection = [
@@ -596,7 +609,7 @@ class ConfigUpdater:
         # ('Coalition.Coalition.Mode', 'Coalition.Coalition.Mode', coalition_to_frostfall),
         # 2025.06.26
         # ('Coalition.Coalition.Mode', 'Coalition.Coalition.Mode', coalition_to_little_academy),
-    ]
+    ] + SHOP_ONCE_REDIRECTION
 
     # redirection += [
     #     (

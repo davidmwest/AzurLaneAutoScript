@@ -252,9 +252,25 @@ class AzurLaneAutoScript:
         from module.awaken.awaken import Awaken
         Awaken(config=self.config, device=self.device).run()
 
+    def enhance_ships(self):
+        from module.retire.scheduled import EnhanceShips
+        EnhanceShips(config=self.config, device=self.device).run()
+
+    def retire_ships(self):
+        from module.retire.scheduled import RetireShips
+        RetireShips(config=self.config, device=self.device).run()
+
     def shop_frequent(self):
         from module.shop.shop_reward import RewardShop
         RewardShop(config=self.config, device=self.device).run_frequent()
+
+    def shop_guild(self):
+        from module.shop.shop_reward import RewardShop
+        RewardShop(config=self.config, device=self.device).run_guild()
+
+    def shop_monthly(self):
+        from module.shop.shop_reward import RewardShop
+        RewardShop(config=self.config, device=self.device).run_monthly()
 
     def shop_once(self):
         from module.shop.shop_reward import RewardShop

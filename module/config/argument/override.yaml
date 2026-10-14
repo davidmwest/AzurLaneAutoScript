@@ -301,6 +301,16 @@ DormRest:
   Scheduler:
     SuccessInterval: 60
     FailureInterval: 60
+EnhanceShips:
+  Scheduler:
+    SuccessInterval: 30
+    FailureInterval: 120
+    ServerUpdate: 00:00
+RetireShips:
+  Scheduler:
+    SuccessInterval: 30
+    FailureInterval: 120
+    ServerUpdate: 00:00
 Meowfficer:
   Scheduler:
     SuccessInterval: 30
@@ -321,6 +331,16 @@ ShopFrequent:
     SuccessInterval: 30
     FailureInterval: 30
     ServerUpdate: 00:00, 12:00, 18:00
+ShopGuild:
+  Scheduler:
+    SuccessInterval: 30
+    FailureInterval: 30
+    ServerUpdate: 00:00
+ShopMonthly:
+  Scheduler:
+    SuccessInterval: 30
+    FailureInterval: 30
+    ServerUpdate: 00:00
 ShopOnce:
   Scheduler:
     SuccessInterval: 30

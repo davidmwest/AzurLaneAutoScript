@@ -532,7 +532,7 @@ GeneralShop:
 GuildShop:
   Refresh: true
   Filter: |-
-    PlateT4 > BookT3 > PR > CatT3 > Chip > BookT2 > Retrofit > FoodT6 > FoodT5 > CatT2 > BoxT4
+    PlateT4
   BOX_T3:
     value: ironblood
     option: [ eagle, royal, sakura, ironblood ]
@@ -558,7 +558,7 @@ GuildShop:
     value: general
     option: [ general, gun, torpedo, antiair, plane ]
   PLATE_T4:
-    value: gun
+    value: general
     option: [ general, gun, torpedo, antiair, plane ]
   PR1:
     value: neptune

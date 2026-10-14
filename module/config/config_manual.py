@@ -15,10 +15,10 @@ class ManualConfig:
     > Exercise
     > Dorm > DormRest > Meowfficer > Guild > Gacha
     > Reward
-    > ShopFrequent > EventShop > ShopOnce > Shipyard > Freebies
+    > ShopFrequent > EventShop > ShopGuild > ShopMonthly > ShopOnce > Shipyard > Freebies
     > PrivateQuarters
     > OpsiExplore
-    > Minigame > Awaken
+    > Minigame > Awaken > EnhanceShips > RetireShips
     > OpsiAshBeacon
     > OpsiDaily > OpsiShop > OpsiVoucher
     > OpsiAbyssal > OpsiStronghold > OpsiObscure > OpsiArchive

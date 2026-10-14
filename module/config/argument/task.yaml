@@ -240,6 +240,10 @@ Reward:
     Awaken:
       - Scheduler
       - Awaken
+    EnhanceShips:
+      - Scheduler
+    RetireShips:
+      - Scheduler
 
 # ==================== DailyMission ====================
 
@@ -259,12 +263,16 @@ DailyMission:
     ShopFrequent:
       - Scheduler
       - GeneralShop
-    ShopOnce:
+    ShopGuild:
       - Scheduler
       - GuildShop
+    ShopMonthly:
+      - Scheduler
       - MedalShop2
-      - MeritShop
       - CoreShop
+    ShopOnce:
+      - Scheduler
+      - MeritShop
     Shipyard:
       - Scheduler
       - ShipyardDr
