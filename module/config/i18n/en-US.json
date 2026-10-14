@@ -488,7 +488,7 @@
   },
   "EmulatorInfo": {
     "_info": {
-      "name": "Emulator Settings",
+      "name": "Emulator Info",
       "help": "The following values are auto-filled according to \"Serial\", if you don’t understand, please don't modify them"
     },
     "Emulator": {
@@ -521,7 +521,7 @@
   },
   "Error": {
     "_info": {
-      "name": "Debug Settings",
+      "name": "Error Handling",
       "help": ""
     },
     "HandleError": {
@@ -3130,6 +3130,8 @@
     "Button": {
       "Start": "Start",
       "Stop": "Stop",
+      "Pause": "Pause",
+      "Resume": "Resume",
       "ScrollON": "Auto Scroll ON",
       "ScrollOFF": "Auto Scroll OFF",
       "ClearLog": "Clear Log",
@@ -3143,13 +3145,17 @@
       "DisableTranslateMode": "Click here to disable translate mode",
       "ConfigSaved": "Config saved",
       "AlasIsRunning": "Scheduler is already running",
-      "ClickToUpdate": "New update available, click here to update"
+      "ClickToUpdate": "New update available, click here to update",
+      "Pausing": "Pausing, the task running now finishes its sortie first"
     },
     "Status": {
       "Running": "Running",
       "Inactive": "Inactive",
       "Warning": "Warning",
-      "Updating": "Waiting Update"
+      "Updating": "Waiting Update",
+      "RunningOutside": "Running (outside the GUI)",
+      "Paused": "Paused",
+      "Pausing": "Pausing"
     },
     "MenuAlas": {
       "Overview": "Overview",
@@ -3168,7 +3174,8 @@
       "Running": "Running",
       "Pending": "Pending",
       "Waiting": "Waiting",
-      "NoTask": "No Task"
+      "NoTask": "No Task",
+      "StartedOutside": "Started outside the GUI"
     },
     "AddAlas": {
       "PopupTitle": "Add new config",

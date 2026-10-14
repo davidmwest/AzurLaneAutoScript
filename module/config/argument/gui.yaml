@@ -12,6 +12,8 @@ Aside:
 Button:
   Start:
   Stop:
+  Pause:
+  Resume:
   ScrollON:
   ScrollOFF:
   ClearLog:
@@ -26,12 +28,16 @@ Toast:
   ConfigSaved:
   AlasIsRunning:
   ClickToUpdate:
+  Pausing:
 
 Status:
   Running:
   Inactive:
   Warning:
   Updating:
+  RunningOutside:
+  Paused:
+  Pausing:
 
 MenuAlas:
   Overview:
@@ -51,6 +57,7 @@ Overview:
   Pending:
   Waiting:
   NoTask:
+  StartedOutside:
 
 AddAlas:
   PopupTitle:

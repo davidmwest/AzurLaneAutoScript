@@ -283,7 +283,7 @@ pre.rich-traceback-code {
     z-index: 100;
     display: grid;
     grid-auto-flow: column;
-    grid-template-columns: 4.4rem 4rem auto 1fr !important;
+    grid-template-columns: 4.4rem 5rem auto 1fr !important;
 }
 
 *[style*="--header-icon--"] {
@@ -406,6 +406,13 @@ pre.rich-traceback-code {
 #pywebio-scope-log-bar-btns {
     display: grid;
     grid-auto-flow: column;
+}
+
+#pywebio-scope-scheduler-bar-btns {
+    display: grid;
+    grid-auto-flow: column;
+    align-items: center;
+    gap: 0.5rem;
 }
 
 #pywebio-scope-log {

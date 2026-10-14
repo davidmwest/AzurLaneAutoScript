@@ -2,8 +2,9 @@ import argparse
 import os
 import queue
 import threading
+import time
 from multiprocessing import Process
-from typing import Dict, List, Union
+from typing import Dict, List, Optional, Union
 
 import inflection
 from rich.console import Console, ConsoleRenderable
@@ -15,10 +16,14 @@ from module.webui.fake_pil_module import *
 
 import_fake_pil_module()
 
+from module.config.scheduler_state import read_scheduler_state, remove_scheduler_state
+from module.config.utils import filepath_pause
 from module.logger import logger, set_file_logger, set_func_logger
 from module.submodule.submodule import load_mod
 from module.submodule.utils import get_available_func, get_available_mod, get_available_mod_func, get_config_mod, \
     get_func_mod, list_mod_instance
+from module.webui.external import LogFileFollower, STATUS_INACTIVE, latest_log_file, log_line_renderable, \
+    scheduler_status
 from module.webui.setting import State
 
 
@@ -34,8 +39,12 @@ class ProcessManager:
         self._process: Process = None
         self._process_locks: Dict[str, threading.Lock] = {}
         self.thd_log_queue_handler: threading.Thread = None
+        self.thd_log_file_follower: threading.Thread = None
 
     def start(self, func, ev: threading.Event = None) -> None:
+        if self.external is not None:
+            logger.warning(f"[{self.config_name}] is running outside the GUI already, not starting another one")
+            return
         if not self.alive:
             if func is None:
                 func = get_config_mod(self.config_name)
@@ -102,9 +111,102 @@ class ProcessManager:
             return False
 
     @property
+    def external(self) -> Optional[dict]:
+        """
+        What a scheduler of this config started outside the GUI, from a terminal or a script, tells,
+        see module/config/scheduler_state.py. None if there is none.
+        """
+        state = read_scheduler_state(self.config_name)
+        if state is None:
+            return None
+        if self._process is not None and state["pid"] == self._process.pid:
+            return None
+        self.follow_log_file()
+        return state
+
+    @property
+    def pause_requested(self) -> bool:
+        return os.path.exists(filepath_pause(self.config_name))
+
+    def pause(self) -> None:
+        """
+        Hold the scheduler between tasks, the task running now ends after its current sortie.
+        """
+        with open(filepath_pause(self.config_name), "w"):
+            pass
+        logger.info(f"[{self.config_name}] Pause requested")
+
+    def resume(self) -> None:
+        try:
+            os.remove(filepath_pause(self.config_name))
+        except FileNotFoundError:
+            pass
+        logger.info(f"[{self.config_name}] Resumed")
+
+    def stop_external(self) -> None:
+        """
+        Stop a scheduler started outside the GUI, only while it holds between tasks.
+        Killed in the middle of a sortie, it would leave the game playing on its own.
+        Not part of stop(), closing the GUI leaves such a scheduler running.
+        """
+        state = self.external
+        if state is None or not state.get("paused"):
+            return
+        import psutil
+        try:
+            psutil.Process(state["pid"]).kill()
+        except psutil.Error as e:
+            logger.warning(f"[{self.config_name}] Failed to stop: {e}")
+            return
+        remove_scheduler_state(self.config_name)
+        self.renderables.append(f"[{self.config_name}] exited. Reason: Manual stop\n")
+
+    def follow_log_file(self) -> None:
+        """
+        Show the log of a scheduler started outside the GUI, by following its log file.
+        """
+        if (
+            self.thd_log_file_follower is not None
+            and self.thd_log_file_follower.is_alive()
+        ):
+            return
+        self.thd_log_file_follower = threading.Thread(
+            target=self._thread_log_file_follower, daemon=True
+        )
+        self.thd_log_file_follower.start()
+
+    def _thread_log_file_follower(self) -> None:
+        follower = None
+        manual_stop = f"[{self.config_name}] exited. Reason: Manual stop\n"
+        while True:
+            state = read_scheduler_state(self.config_name)
+            if state is None:
+                if self.renderables[-1:] != [manual_stop]:
+                    self.renderables.append(f"[{self.config_name}] exited outside the GUI\n")
+                break
+            if self._process is not None and state["pid"] == self._process.pid:
+                break
+            # The scheduler starts a new file on the day it starts
+            file = latest_log_file(self.config_name)
+            if file is not None and (follower is None or follower.file != file):
+                follower = LogFileFollower(file)
+            if follower is not None:
+                for line in follower.read():
+                    self.renderables.append(log_line_renderable(line))
+                    if len(self.renderables) > self.renderables_max_length:
+                        self.renderables = self.renderables[self.renderables_reduce_length:]
+            time.sleep(0.5)
+        logger.info("End of log file follower loop")
+
+    @property
     def state(self) -> int:
-        if self.alive:
-            return 1
+        alive = self.alive
+        scheduler = read_scheduler_state(self.config_name)
+        if scheduler is not None and not alive:
+            self.follow_log_file()
+        status = scheduler_status(alive, scheduler, self.pause_requested)
+        if status is not None:
+            return status
         elif len(self.renderables) == 0:
             return 2
         else:
@@ -118,6 +220,8 @@ class ProcessManager:
                 return 2
             elif s.endswith("Reason: Update"):
                 return 4
+            elif s.endswith("exited outside the GUI"):
+                return STATUS_INACTIVE
             else:
                 return 3
 

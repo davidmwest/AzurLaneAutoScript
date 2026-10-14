@@ -3130,6 +3130,8 @@
     "Button": {
       "Start": "啟動",
       "Stop": "停止",
+      "Pause": "暫停",
+      "Resume": "繼續",
       "ScrollON": "自動滾動 開",
       "ScrollOFF": "自動滾動 關",
       "ClearLog": "清空日誌",
@@ -3143,13 +3145,17 @@
       "DisableTranslateMode": "點擊這裡關閉翻譯模式",
       "ConfigSaved": "設定已儲存",
       "AlasIsRunning": "調度器已在執行中",
-      "ClickToUpdate": "有更新可用，點擊這裡進行更新"
+      "ClickToUpdate": "有更新可用，點擊這裡進行更新",
+      "Pausing": "正在暫停，當前任務會先打完這一戰"
     },
     "Status": {
       "Running": "執行中",
       "Inactive": "閒置",
       "Warning": "發生錯誤",
-      "Updating": "等待更新"
+      "Updating": "等待更新",
+      "RunningOutside": "執行中（在 GUI 外啟動）",
+      "Paused": "已暫停",
+      "Pausing": "暫停中"
     },
     "MenuAlas": {
       "Overview": "總覽",
@@ -3168,7 +3174,8 @@
       "Running": "執行中",
       "Pending": "佇列中",
       "Waiting": "等待中",
-      "NoTask": "無任務"
+      "NoTask": "無任務",
+      "StartedOutside": "在 GUI 外啟動"
     },
     "AddAlas": {
       "PopupTitle": "添加新的設定",

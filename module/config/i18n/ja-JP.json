@@ -3130,6 +3130,8 @@
     "Button": {
       "Start": "実行",
       "Stop": "中止",
+      "Pause": "一時停止",
+      "Resume": "再開",
       "ScrollON": "自動スクロール ON",
       "ScrollOFF": "自動スクロール OFF",
       "ClearLog": "ログクリーニング",
@@ -3143,13 +3145,17 @@
       "DisableTranslateMode": "クリックして翻訳モードを中止します",
       "ConfigSaved": "コンフィグ設定は保存されました",
       "AlasIsRunning": "スケジューラーはもう実行しています",
-      "ClickToUpdate": "新しいアップデータがあります。クリックしてアップデータ"
+      "ClickToUpdate": "新しいアップデータがあります。クリックしてアップデータ",
+      "Pausing": "一時停止します。実行中のタスクは今の出撃を終えてから止まります"
     },
     "Status": {
       "Running": "実行中",
       "Inactive": "実行中止",
       "Warning": "エラー発生",
-      "Updating": "アップデータを待っています"
+      "Updating": "アップデータを待っています",
+      "RunningOutside": "実行中（GUI 外で起動）",
+      "Paused": "一時停止中",
+      "Pausing": "一時停止待ち"
     },
     "MenuAlas": {
       "Overview": "概要",
@@ -3168,7 +3174,8 @@
       "Running": "実行中",
       "Pending": "隊列中",
       "Waiting": "Waiting",
-      "NoTask": "No Task"
+      "NoTask": "No Task",
+      "StartedOutside": "GUI 外で起動"
     },
     "AddAlas": {
       "PopupTitle": "新しいコンフィグを追加",

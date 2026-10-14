@@ -43,6 +43,7 @@ import module.webui.lang as lang
 from module.config.config import AzurLaneConfig, Function
 from module.config.deep import deep_get, deep_iter, deep_set
 from module.config.env import IS_ON_PHONE_CLOUD
+from module.config.scheduler_state import read_scheduler_state
 from module.config.server import to_server
 from module.config.utils import (
     alas_instance,
@@ -204,6 +205,9 @@ class AlasGUI(Frame):
                 2 (not running)
                 3 (warning, stop unexpectedly)
                 4 (stop for update)
+                5 (running, started outside the GUI)
+                6 (paused, holding between tasks)
+                7 (pausing, a task finishes first)
                 0 (hide)
                 -1 (*state not changed)
         """
@@ -219,6 +223,12 @@ class AlasGUI(Frame):
             put_loading_text(t("Gui.Status.Warning"), shape="grow", color="warning")
         elif state == 4:
             put_loading_text(t("Gui.Status.Updating"), shape="grow", color="success")
+        elif state == 5:
+            put_loading_text(t("Gui.Status.RunningOutside"), color="success")
+        elif state == 6:
+            put_loading_text(t("Gui.Status.Paused"), color="secondary", fill=True)
+        elif state == 7:
+            put_loading_text(t("Gui.Status.Pausing"), shape="grow", color="secondary")
 
     @classmethod
     def set_theme(cls, theme="default") -> None:
@@ -422,7 +432,13 @@ class AlasGUI(Frame):
                     put_text(t("Gui.Overview.Scheduler")).style(
                         "font-size: 1.25rem; margin: auto .5rem auto;"
                     ),
-                    put_scope("scheduler_btn"),
+                    put_scope(
+                        "scheduler-bar-btns",
+                        [
+                            put_scope("scheduler_pause_btn"),
+                            put_scope("scheduler_btn"),
+                        ],
+                    ),
                 ],
             )
             put_scope(
@@ -450,16 +466,10 @@ class AlasGUI(Frame):
                 ],
             )
 
-        switch_scheduler = BinarySwitchButton(
-            label_on=t("Gui.Button.Stop"),
-            label_off=t("Gui.Button.Start"),
-            onclick_on=lambda: self.alas.stop(),
-            onclick_off=lambda: self.alas.start(None, updater.event),
-            get_state=lambda: self.alas.alive,
-            color_on="off",
-            color_off="on",
-            scope="scheduler_btn",
+        switch_scheduler = self.scheduler_switch(
+            start=lambda: self.alas.start(None, updater.event)
         )
+        switch_pause = self.pause_switch()
 
         log = RichLog("log")
 
@@ -494,9 +504,80 @@ class AlasGUI(Frame):
         )
 
         self.task_handler.add(switch_scheduler.g(), 1, True)
+        self.task_handler.add(switch_pause.g(), 1, True)
         self.task_handler.add(switch_log_scroll.g(), 1, True)
         self.task_handler.add(self.alas_update_overview_task, 10, True)
         self.task_handler.add(log.put_log(self.alas), 0.25, True)
+
+    def scheduler_switch(self, start) -> Switch:
+        """
+        Start and Stop of the scheduler. A scheduler started outside the GUI, from a terminal or a script,
+        can only be stopped while it is paused, between tasks.
+
+        Args:
+            start (callable): Called by Start.
+        """
+
+        def put_btn(label, onclick, color):
+            clear("scheduler_btn")
+            put_button(label=label, onclick=onclick, color=color, scope="scheduler_btn")
+
+        def put_started_outside():
+            clear("scheduler_btn")
+            put_text(t("Gui.Overview.StartedOutside"), scope="scheduler_btn").style(
+                "--overview-notask-text--"
+            )
+
+        def get_state():
+            if self.alas.alive:
+                return "running"
+            external = self.alas.external
+            if external is None:
+                return "stopped"
+            if external.get("paused"):
+                return "outside_paused"
+            return "outside"
+
+        return Switch(
+            status={
+                "stopped": partial(put_btn, t("Gui.Button.Start"), start, "on"),
+                "running": partial(put_btn, t("Gui.Button.Stop"), lambda: self.alas.stop(), "off"),
+                "outside": put_started_outside,
+                "outside_paused": partial(put_btn, t("Gui.Button.Stop"), lambda: self.alas.stop_external(), "off"),
+            },
+            get_state=get_state,
+            name="scheduler_btn",
+        )
+
+    def pause_switch(self) -> Switch:
+        """
+        Pause holds the scheduler between tasks, Resume lets it go on.
+        """
+
+        def pause():
+            self.alas.pause()
+            toast(t("Gui.Toast.Pausing"), duration=5, position="right", color="success")
+
+        def put_btn(label, onclick, color):
+            clear("scheduler_pause_btn")
+            put_button(label=label, onclick=onclick, color=color, scope="scheduler_pause_btn")
+
+        def get_state():
+            if self.alas.pause_requested:
+                return "paused"
+            if self.alas.alive or self.alas.external is not None:
+                return "running"
+            return "stopped"
+
+        return Switch(
+            status={
+                "stopped": lambda: clear("scheduler_pause_btn"),
+                "running": partial(put_btn, t("Gui.Button.Pause"), pause, "off"),
+                "paused": partial(put_btn, t("Gui.Button.Resume"), lambda: self.alas.resume(), "on"),
+            },
+            get_state=get_state,
+            name="scheduler_pause_btn",
+        )
 
     def _init_alas_config_watcher(self) -> None:
         def put_queue(path, value):
@@ -588,16 +669,17 @@ class AlasGUI(Frame):
         self.alas_config.load()
         self.alas_config.get_next_task()
 
-        if len(self.alas_config.pending_task) >= 1:
-            if self.alas.alive:
-                running = self.alas_config.pending_task[:1]
-                pending = self.alas_config.pending_task[1:]
-            else:
-                running = []
-                pending = self.alas_config.pending_task[:]
-        else:
-            running = []
-            pending = []
+        pending = self.alas_config.pending_task[:]
+        running = []
+        scheduler = read_scheduler_state(self.alas_name)
+        if scheduler is not None:
+            # Wherever the scheduler was started from, it tells the task it runs, if any
+            current = scheduler.get("task") if not scheduler.get("paused") else None
+            running = [func for func in pending if func.command == current][:1]
+            pending = [func for func in pending if func not in running]
+        elif self.alas.alive and pending:
+            running = pending[:1]
+            pending = pending[1:]
         waiting = self.alas_config.waiting_task
 
         def put_task(func: Function):
@@ -682,16 +764,7 @@ class AlasGUI(Frame):
             )
             put_scope("scheduler_btn")
 
-        switch_scheduler = BinarySwitchButton(
-            label_on=t("Gui.Button.Stop"),
-            label_off=t("Gui.Button.Start"),
-            onclick_on=lambda: self.alas.stop(),
-            onclick_off=lambda: self.alas.start(task),
-            get_state=lambda: self.alas.alive,
-            color_on="off",
-            color_off="on",
-            scope="scheduler_btn",
-        )
+        switch_scheduler = self.scheduler_switch(start=lambda: self.alas.start(task))
 
         with use_scope("log-bar"):
             put_text(t("Gui.Overview.Log")).style(
@@ -1173,11 +1246,11 @@ class AlasGUI(Frame):
             ).style("text-align: center")
 
             # show something
+            # The notice of Alas comes first, config_manual.OutputConfig adds it to every markdown
             put_markdown(
                 """
-            Alas is a free open source software, if you paid for Alas from any channel, please refund.
-            Alas 是一款免费开源软件，如果你在任何渠道付费购买了Alas，请退款。
-            Project repository 项目地址：`https://github.com/LmeSzinc/AzurLaneAutoScript`
+            Purin is a fork of Alas, with changes of its own. Purin 是 Alas 的分支。
+            Purin repository 项目地址：`https://github.com/davidmwest/Purin`
             """
             ).style("text-align: center")
 
