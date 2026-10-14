@@ -1,4 +1,4 @@
-from module.base.button import ButtonGrid
+from module.base.button import Button, ButtonGrid
 from module.base.timer import Timer
 from module.base.utils import color_similar, get_color, resize
 from module.combat.assets import GET_ITEMS_1
@@ -243,7 +243,12 @@ class Retirement(Enhancement, QuickRetireSettingHandler):
                         end = True
                         total = 10
                         break
-                if self.appear_then_click(ONE_CLICK_RETIREMENT, offset=(20, 20), interval=2):
+                # The game takes a few seconds to pick ships on a large dock, then its popup comes up
+                # with Cancel over the right part of this button. Tap the left part, and not too often.
+                if self.appear(ONE_CLICK_RETIREMENT, offset=(20, 20), interval=6):
+                    x1, y1, x2, y2 = ONE_CLICK_RETIREMENT.button
+                    left = (x1 + 6, y1 + 6, x1 + 66, y2 - 6)
+                    self.device.click(Button(area=left, color=(), button=left, name='ONE_CLICK_RETIREMENT'))
                     click_count += 1
                     continue
 
