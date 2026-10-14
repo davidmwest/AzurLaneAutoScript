@@ -1,5 +1,31 @@
 **| English | [简体中文](README.md) | [日本語](README_jp.md) |**
 
+# Purin
+
+*Purin~! Ah, I mean... Bulin, reporting for chores!*
+
+Purin is a fork of [Alas (AzurLaneAutoScript)](https://github.com/LmeSzinc/AzurLaneAutoScript), the Azur Lane bot,
+named after Universal Bulin, the little helper who gets your ships leveled. It does everything Alas does, and a bit more:
+
+- **High resolutions**: plays a game running at 2560x1440, or any 16:9 size that is a multiple of 1280x720.
+- **Stages as data**: one `stages.py` per event instead of a Python module for every stage.
+- **Hard mode lineups**: an empty lineup is filled with the Advice button of the game instead of stopping.
+- **Ship rotation**: a ship that reaches a level, 120 say, leaves the lineup and the next one from the dock comes in,
+  chosen by the sort order and filters of the dock.
+- **Cognitive awakening with a reserve**: keeps as many cognitive chips as you ask for, awakens the ships that still fit,
+  and checks again every so often while you farm.
+- **Event shop**: reads the shop reliably, the scroll, the stock of every item and which balance is which.
+- **Keeps running**: a frozen game, an unknown screen or an unexpected error restarts the game instead of stopping,
+  and a task that keeps failing is put off while the others go on. Create `config/alas.pause` to hold the scheduler
+  between tasks, delete it to go on.
+- **Careful with your fleet**: a mode that never retires ships, no tap on UNLOCK by mistake,
+  and a fleet whose mood is too low is left to rest instead of losing affinity.
+
+Purin lives on the `redesign` branch, `master` follows Alas.
+The README of Alas below still applies, Purin runs the same way.
+
+---
+
 # AzurLaneAutoScript
 
 Azur Lane bot with GUI (Supports CN, EN, JP, TW, able to support other servers), designed for 24/7 running scenes, can take over almost all Azur Lane gameplay. Azur Lane, as a mobile game, has entered the late stage of its life cycle. During the period from now to the server down, please reduce the time spent on the Azur Lane and leave everything to Alas.
