@@ -16,6 +16,21 @@ from module.logger import logger
 from module.notify import handle_notify
 
 
+def failed_task_delay(previous=None):
+    """
+    Args:
+        previous (int): Minutes the task was put off for the last time it kept failing,
+            None if it has succeeded since.
+
+    Returns:
+        int: Minutes to put it off for now. Longer every time, a task that is broken should not
+            cost a restart of the game every few minutes.
+    """
+    if not previous:
+        return 20
+    return min(previous * 2, 240)
+
+
 class AzurLaneAutoScript:
     stop_event: threading.Event = None
 
@@ -27,6 +42,8 @@ class AzurLaneAutoScript:
         # Failure count of tasks
         # Key: str, task name, value: int, failure count
         self.failure_record = {}
+        # Minutes a task was last put off for after failing over and over, {task: minutes}
+        self.failure_delay = {}
 
     @cached_property
     def config(self):
@@ -97,6 +114,13 @@ class AzurLaneAutoScript:
             if self.checker.is_available():
                 logger.critical('Game page unknown')
                 self.save_error_log()
+                if self.config.Error_KeepRunning:
+                    # A frozen game or a popup nobody is there to close, a restart gets out of both
+                    logger.warning(f'{self.device.package} will be restarted in 10 seconds')
+                    logger.warning('If you are playing by hand, please stop Alas')
+                    self.config.task_call('Restart')
+                    self.device.sleep(10)
+                    return False
                 handle_notify(
                     self.config.Error_OnePushConfig,
                     title=f"Alas <{self.config_name}> crashed",
@@ -490,6 +514,33 @@ class AzurLaneAutoScript:
             if self.config.should_reload():
                 return False
 
+    def put_off_failed_task(self, task):
+        """
+        A task failed 3 times in a row. Every failure ended with a restart of the game,
+        so the game is fine again: let the other tasks run, and try this one again later.
+
+        Args:
+            task (str):
+
+        Returns:
+            int: Minutes the task is put off for.
+        """
+        minutes = failed_task_delay(self.failure_delay.get(task))
+        self.failure_delay[task] = minutes
+        deep_set(self.failure_record, keys=task, value=0)
+        logger.critical(f'Task `{task}` failed 3 or more times, try it again in {minutes} minutes')
+        handle_notify(
+            self.config.Error_OnePushConfig,
+            title=f"Alas <{self.config_name}> task failed",
+            content=f"<{self.config_name}> Task `{task}` failed 3 or more times, "
+                    f"trying it again in {minutes} minutes",
+        )
+        # The task that just ran may have left the config bound to another task
+        del_cached_property(self, 'config')
+        self.config.task_delay(minute=minutes, task=task)
+        del_cached_property(self, 'config')
+        return minutes
+
     def wait_while_paused(self):
         """
         Hold between tasks while ./config/<config_name>.pause exists,
@@ -618,6 +669,12 @@ class AzurLaneAutoScript:
             failed = deep_get(self.failure_record, keys=task, default=0)
             failed = 0 if success else failed + 1
             deep_set(self.failure_record, keys=task, value=failed)
+            if success:
+                self.failure_delay.pop(task, None)
+            if failed >= 3 and self.config.Error_KeepRunning:
+                self.put_off_failed_task(task)
+                self.checker.check_now()
+                continue
             if failed >= 3:
                 logger.critical(f"Task `{task}` failed 3 or more times.")
                 logger.critical("Possible reason #1: You haven't used it correctly. "

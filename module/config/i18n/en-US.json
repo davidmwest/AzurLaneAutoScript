@@ -528,6 +528,10 @@
       "name": "Enable Exception Handling",
       "help": "Handles select exceptions, will retreat if in battle"
     },
+    "KeepRunning": {
+      "name": "Keep Running",
+      "help": "For running unattended. When the game is on a screen Alas does not know, restart the game instead of stopping. When a task fails 3 times in a row, put that task off, for 20 minutes at first and longer each time, and go on with the others, instead of stopping.\nOff: stop and wait for you in both cases"
+    },
     "SaveError": {
       "name": "Record Exception",
       "help": "Records exception and log into directory for review or sharing"

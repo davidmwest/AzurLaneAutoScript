@@ -184,6 +184,10 @@
         "type": "checkbox",
         "value": true
       },
+      "KeepRunning": {
+        "type": "checkbox",
+        "value": true
+      },
       "SaveError": {
         "type": "checkbox",
         "value": true

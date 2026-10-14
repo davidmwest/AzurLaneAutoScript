@@ -83,6 +83,7 @@ EmulatorInfo:
     type: textarea
 Error:
   HandleError: true
+  KeepRunning: true
   SaveError: true
   OnePushConfig:
     type: textarea

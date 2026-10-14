@@ -23,6 +23,32 @@ def make_scheduler(paused_checks):
     return SimpleNamespace(config=Config(paused_checks), config_name='alas', stop_event=None)
 
 
+def test_a_task_that_keeps_failing_is_put_off_longer_each_time():
+    delays, previous = [], None
+    for _ in range(6):
+        previous = alas.failed_task_delay(previous)
+        delays.append(previous)
+
+    assert delays == [20, 40, 80, 160, 240, 240]
+
+
+def test_failed_task_is_put_off_and_counted_from_zero_again(monkeypatch):
+    monkeypatch.setattr(alas, 'handle_notify', Mock())
+    monkeypatch.setattr(alas, 'del_cached_property', Mock())
+    config = SimpleNamespace(Error_OnePushConfig='provider: null', task_delay=Mock())
+    scheduler = SimpleNamespace(config=config, config_name='alas', failure_record={'Event2': 3},
+                                failure_delay={})
+
+    assert AzurLaneAutoScript.put_off_failed_task(scheduler, 'Event2') == 20
+    assert scheduler.failure_record == {'Event2': 0}
+    config.task_delay.assert_called_once_with(minute=20, task='Event2')
+
+    # Failing 3 times again without a success in between
+    assert AzurLaneAutoScript.put_off_failed_task(scheduler, 'Event2') == 40
+    # Another task starts from the beginning
+    assert AzurLaneAutoScript.put_off_failed_task(scheduler, 'Event') == 20
+
+
 def test_scheduler_does_not_wait_without_a_pause(monkeypatch):
     sleep = Mock()
     monkeypatch.setattr(alas.time, 'sleep', sleep)
