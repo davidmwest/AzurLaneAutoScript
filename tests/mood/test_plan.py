@@ -61,11 +61,27 @@ def test_jobs_use_the_lineup_of_a_stage_or_the_common_fleets():
 
     assert jobs == {
         # Farming: the mob fleet does most battles
-        ('Event2', ('Victorious META', 'London')): 40,
-        ('Event2', ('Fusou META',)): 10,
+        ('Event2', ('Victorious META', 'London')): 200,
+        ('Event2', ('Fusou META',)): 50,
         # Dailies run once, the standby fleet does not fight
         ('EventA', ('Hermes',)): 5,
     }
+
+
+def test_boss_fleet_of_farming_rests_before_the_fleet_of_dailies():
+    """
+    The fleet of daily stages is at 119 and runs in a few minutes, the boss fleet of farming is full.
+    """
+    moods = make_moods({'Fusou META': (150, 1, 'rest'), 'Hermes': (119, 5, 'dock')},
+                       lineups={'Event2': {'1': [], '2': ['Fusou META']}})
+    soon = (NOW + timedelta(minutes=10)).strftime('%Y-%m-%d %H:%M:%S')
+    data = {
+        'Event2': task(next_run=soon),
+        'EventA': task(fleet1=5, fleet2=6, order='fleet1_all_fleet2_standby', next_run=soon),
+        'EventB': task(fleet1=5, fleet2=6, order='fleet1_all_fleet2_standby', next_run=soon),
+    }
+
+    assert rest_plan(upcoming_jobs(data, moods), moods, ['Fusou META'], [], 1, NOW) == ['Fusou META']
 
 
 def plan(ships, jobs, rest, train=(), capacity=6, lineups=None):

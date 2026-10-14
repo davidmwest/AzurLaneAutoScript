@@ -10,9 +10,10 @@ from module.mood.ship import MOOD_MAX, ShipMoods, parse_time
 
 # Battles of a fleet in one run of a stage
 ROLE_BATTLES = {'mob': 4, 'boss': 1, 'all': 5}
-# Tasks that clear a few stages a day, the others farm a stage as long as they can
+# Tasks that clear a few stages a day, the others farm a stage as long as they can.
+# A farming fleet loses far more in a day than a daily one, even its boss fleet.
 DAILY_TASKS = ['EventA', 'EventB', 'EventC', 'EventD', 'EventSp', 'CoalitionSp', 'RaidDaily']
-FARMING_RUNS = 10
+FARMING_RUNS = 50
 # A ship with full mood needs no rest, unless her task is about to run
 DUE_SOON = timedelta(hours=1)
 # A resting ship stays for a few points of mood less than another one, not to swap ships back and forth
