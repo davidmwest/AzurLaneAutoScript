@@ -1,6 +1,8 @@
 import collections
+import time
 from datetime import datetime
 
+import numpy as np
 from lxml import etree
 
 from module.device.env import IS_WINDOWS
@@ -68,6 +70,12 @@ class Device(Screenshot, Control, AppControl):
     stuck_timer = Timer(60, count=60).start()
     stuck_timer_long = Timer(180, count=180).start()
     stuck_long_wait_list = ['BATTLE_STATUS_S', 'PAUSE', 'LOGIN_CHECK', 'TEMPLATE_MANJUU']
+    # A battle is given the long wait because it shows nothing to act on for minutes, but it never stands still.
+    # A screen that has not changed by a single pixel for this many seconds during a battle is a hung game.
+    stuck_frozen_wait_list = ['BATTLE_STATUS_S', 'PAUSE']
+    stuck_frozen_seconds = 30
+    _frozen_sample = None
+    _frozen_since = 0.
 
     def __init__(self, *args, **kwargs):
         for trial in range(4):
@@ -206,7 +214,27 @@ class Device(Screenshot, Control, AppControl):
         if self.handle_night_commission():
             super().screenshot()
 
+        self.frozen_record_update()
         return self.image
+
+    def frozen_record_update(self):
+        """
+        Remember since when the screen has been exactly the same.
+        """
+        # Every 8th pixel is plenty to tell a frame that has not changed from one that has
+        sample = self.image[::8, ::8]
+        if self._frozen_sample is not None and sample.shape == self._frozen_sample.shape \
+                and np.array_equal(sample, self._frozen_sample):
+            return
+        self._frozen_sample = sample.copy()
+        self._frozen_since = time.time()
+
+    def is_screen_frozen(self):
+        """
+        Returns:
+            bool: If the screen has been exactly the same for stuck_frozen_seconds.
+        """
+        return self._frozen_since > 0 and time.time() - self._frozen_since > self.stuck_frozen_seconds
 
     def dump_hierarchy(self) -> etree._Element:
         self.stuck_record_check()
@@ -251,6 +279,9 @@ class Device(Screenshot, Control, AppControl):
         if not reached_long:
             for button in self.stuck_long_wait_list:
                 if button in self.detect_record:
+                    if button in self.stuck_frozen_wait_list and self.is_screen_frozen():
+                        logger.warning(f'Screen has not changed for {self.stuck_frozen_seconds} seconds')
+                        break
                     return False
 
         show_function_call()
