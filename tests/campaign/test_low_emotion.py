@@ -65,6 +65,8 @@ def test_exhausted_fleet_is_counted_as_zero():
         Emotion_Fleet2Value=110, Emotion_Fleet2Record=record, Emotion_Fleet2Control='prevent_green_face',
         Emotion_Fleet2Recover='not_in_dormitory', Emotion_Fleet2Oath=False,
         set_record=Mock(),
+        # Without the task DormRest, fleets are followed as a whole
+        is_task_enabled=lambda task: False,
     )
     emotion = Emotion(config)
 

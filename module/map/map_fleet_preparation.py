@@ -382,6 +382,9 @@ class FleetPreparation(InfoHandler):
         if self.map_is_hard_mode:
             logger.info('Hard Campaign. No fleet preparation')
             self.lineup_rotation()
+            # Who is in the lineup, to follow their mood one by one
+            from module.mood.lineup import record_lineup
+            record_lineup(self)
             # Clear submarine if user did not set a submarine fleet
             if submarine.allow():
                 if self.config.Submarine_Fleet:
@@ -391,6 +394,10 @@ class FleetPreparation(InfoHandler):
             else:
                 self.config.SUBMARINE = 0
             return False
+
+        # The stage uses the common fleets, not a lineup of its own
+        from module.mood.lineup import forget_lineup
+        forget_lineup(self)
 
         # Submarine.
         # cache submarine.allow() to avoid inconsistency after setting fleet_2

@@ -224,6 +224,8 @@ Reward:
       - Scheduler
       - Dorm
       - BuyFurniture
+    DormRest:
+      - Scheduler
     Meowfficer:
       - Scheduler
       - Meowfficer

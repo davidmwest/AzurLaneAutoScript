@@ -13,7 +13,7 @@ class ManualConfig:
     > OpsiCrossMonth
     > Commission > Tactical > Research
     > Exercise
-    > Dorm > Meowfficer > Guild > Gacha
+    > Dorm > DormRest > Meowfficer > Guild > Gacha
     > Reward
     > ShopFrequent > EventShop > ShopOnce > Shipyard > Freebies
     > PrivateQuarters

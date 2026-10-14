@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from time import sleep
 
 import numpy as np
@@ -8,6 +8,7 @@ from module.base.utils import random_normal_distribution_int
 from module.config.config import AzurLaneConfig
 from module.exception import ScriptEnd, ScriptError, RequestHumanTakeover
 from module.logger import logger
+from module.mood.ship import ShipMoods
 
 DIC_LIMIT = {
     'keep_exp_bonus': 120,
@@ -26,6 +27,8 @@ DIC_RECOVER_MAX = {
     'dormitory_floor_2': 150,
 }
 OATH_RECOVER = 10
+# The game warns about low mood when a ship of the fleet is below this
+LOW_MOOD = 30
 
 
 class FleetEmotion:
@@ -144,6 +147,90 @@ class FleetEmotion:
         recovered = (int(datetime.now().timestamp()) // 360 + recover_count + 1) * 360
         return datetime.fromtimestamp(recovered)
 
+    def show(self):
+        logger.attr(f'Emotion fleet_{self.fleet}', self.value)
+
+
+class ShipFleetEmotion(FleetEmotion):
+    """
+    Mood of a fleet whose ships are followed one by one, see module/mood/ship.py.
+    It is the mood of the ship that has the lowest.
+    """
+
+    def __init__(self, config, fleet, moods, names):
+        """
+        Args:
+            config (AzurLaneConfig):
+            fleet (int): Fleet index, 1 or 2
+            moods (ShipMoods):
+            names (list[str]): Ships of the fleet
+        """
+        super().__init__(config, fleet)
+        self.moods = moods
+        self.names = names
+
+    @property
+    def ships(self):
+        return self.moods.ships_of(self.names)
+
+    @property
+    def value(self):
+        return self.current
+
+    def update(self):
+        now = datetime.now()
+        self.current = min(ship.at(now) for ship in self.ships)
+
+    def get_recovered(self, expected_reduce=0):
+        """
+        Args:
+            expected_reduce (int):
+
+        Returns:
+            datetime.datetime: When every ship of the fleet will be at the control limit and `expected_reduce` above.
+                If already recovered, return time in the past.
+        """
+        if self.control == 'keep_exp_bonus' and expected_reduce >= 29:
+            expected_reduce = 29
+        target = self.limit + expected_reduce
+        now = datetime.now()
+        ships = self.ships
+        times = [ship.when(target, now) for ship in ships]
+        stuck = [ship.name for ship, time in zip(ships, times) if time is None]
+        if stuck:
+            # The task DormRest may bring them into the dorm
+            logger.warning(f'Out of the dorm, mood of {stuck} stops at 119, it is not enough for {target}. '
+                           f'Check again in an hour')
+            return now + timedelta(hours=1)
+        return max(times)
+
+    def fight(self, cost):
+        """
+        A battle of the fleet, every ship of it loses `cost`.
+        """
+        now = datetime.now()
+        for ship in self.ships:
+            ship.fight(now, cost)
+        self.moods.save()
+        self.update()
+
+    def exhausted(self):
+        """
+        The game warns about low mood, whatever has been calculated.
+        Which ship is low is not known, they are counted as low until read in the dorm again.
+        """
+        now = datetime.now().replace(microsecond=0)
+        for ship in self.ships:
+            ship.mood = min(ship.at(now), LOW_MOOD)
+            ship.time = now
+        self.moods.save()
+        self.update()
+
+    def show(self):
+        now = datetime.now()
+        moods = ', '.join(f'{ship.name} {ship.at(now)}' for ship in self.ships)
+        logger.attr(f'Emotion fleet_{self.fleet}', f'{self.current} ({moods})')
+
 
 class Emotion:
     total_reduced = 0
@@ -157,7 +244,52 @@ class Emotion:
         self.config = config
         self.fleet_1 = FleetEmotion(self.config, fleet=1)
         self.fleet_2 = FleetEmotion(self.config, fleet=2)
-        self.fleets = [self.fleet_1, self.fleet_2]
+        # {(fleet index, ship names): ShipFleetEmotion}
+        self._ship_fleets = {}
+
+    @cached_property
+    def moods(self):
+        return ShipMoods(self.config)
+
+    def ship_names(self, index):
+        """
+        Args:
+            index (int): Fleet index, 1 or 2.
+
+        Returns:
+            list[str]: Ships of the fleet if they are followed one by one, by the task DormRest.
+                Empty to follow the fleet as a whole.
+        """
+        if not self.config.is_task_enabled('DormRest'):
+            return []
+        # A stage with its own lineup, like hard mode and the hard stages of events,
+        # the ships there are not the common fleets. The lineup is seen on the first sortie, see record_lineup()
+        task = getattr(self.config.task, 'command', '')
+        if task in self.moods.lineups:
+            return self.moods.lineup(task, index)
+        if self.config.Campaign_Mode == 'hard':
+            return []
+        number = getattr(self.config, f'Fleet_Fleet{index}', 0)
+        if not isinstance(number, int) or not 1 <= number <= 6:
+            return []
+        return self.moods.fleet(number)
+
+    @property
+    def fleets(self):
+        """
+        Returns:
+            list[FleetEmotion]: Fleet 1 and 2.
+        """
+        fleets = []
+        for index, fleet in [(1, self.fleet_1), (2, self.fleet_2)]:
+            names = self.ship_names(index)
+            if names:
+                key = (index, tuple(names))
+                if key not in self._ship_fleets:
+                    self._ship_fleets[key] = ShipFleetEmotion(self.config, fleet=index, moods=self.moods, names=names)
+                fleet = self._ship_fleets[key]
+            fleets.append(fleet)
+        return fleets
 
     @property
     def is_calculate(self):
@@ -186,7 +318,7 @@ class Emotion:
 
     def show(self):
         for fleet in self.fleets:
-            logger.attr(f'Emotion fleet_{fleet.fleet}', fleet.value)
+            fleet.show()
 
     @property
     def reduce_per_battle(self):
@@ -236,10 +368,14 @@ class Emotion:
         self.update()
         self.record()
         self.show()
-        recovered = max([f.get_recovered(b) for f, b in zip(self.fleets, battle)])
+        fleets = self.fleets
+        recovered = max([f.get_recovered(b) for f, b in zip(fleets, battle)])
         if recovered > datetime.now():
             logger.info('Delay current task to prevent emotion control in the future')
             self.config.task_delay(target=recovered)
+            if any(isinstance(fleet, ShipFleetEmotion) for fleet in fleets):
+                # Read the moods in the dorm, and rest the ships that need it
+                self.config.task_call('DormRest', force_call=False)
             raise ScriptEnd('Emotion control')
 
     def wait(self, fleet_index):
@@ -276,7 +412,13 @@ class Emotion:
         """
         logger.hr('Emotion exhausted')
         self.update()
-        self.fleets[fleet_index - 1].current = 0
+        fleet = self.fleets[fleet_index - 1]
+        if isinstance(fleet, ShipFleetEmotion):
+            fleet.exhausted()
+            # The dorm shows who is low
+            self.config.task_call('DormRest', force_call=False)
+        else:
+            fleet.current = 0
         self.record()
         self.show()
 
@@ -293,7 +435,10 @@ class Emotion:
         self.update()
 
         fleet = self.fleets[fleet_index - 1]
-        fleet.current -= self.reduce_per_battle
+        if isinstance(fleet, ShipFleetEmotion):
+            fleet.fight(self.reduce_per_battle)
+        else:
+            fleet.current -= self.reduce_per_battle
         self.total_reduced += self.reduce_per_battle
         self.record()
         self.show()

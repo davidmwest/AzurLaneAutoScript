@@ -232,6 +232,10 @@ class AzurLaneAutoScript:
         from module.dorm.dorm import RewardDorm
         RewardDorm(config=self.config, device=self.device).run()
 
+    def dorm_rest(self):
+        from module.mood.dorm_rest import DormRest
+        DormRest(config=self.config, device=self.device).run()
+
     def meowfficer(self):
         from module.meowfficer.meowfficer import RewardMeowfficer
         RewardMeowfficer(config=self.config, device=self.device).run()
