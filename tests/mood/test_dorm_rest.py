@@ -9,8 +9,8 @@ import module.config.server as server
 from module.base.button import Button
 from module.base.utils import crop
 from module.map.lineup_rotation import SLOTS_PER_FLEET, lineup_slot
-from module.mood.dorm_rest import PickerCard, DormShip, picker_fleets_ended, picker_is_top, picker_low_mood_ended, \
-    picker_row_tops, read_dorm_floor, read_picker_row, ship_list_tab, update_moods
+from module.mood.dorm_rest import PickerCard, DormShip, picker_drawn, picker_fleets_ended, picker_is_top, \
+    picker_low_mood_ended, picker_row_tops, read_dorm_floor, read_picker_row, ship_list_tab, update_moods
 from module.mood.lineup import learn_lineup_ships, level_area, match_lineup, portrait_area, record_lineup
 from module.mood.ship import ShipMood, ShipMoods, portrait_signature
 from module.ocr.ocr import Digit
@@ -169,6 +169,58 @@ def test_update_follows_the_dorm_and_the_fleets():
     assert moods.read == NOW
 
 
+NEVADA_CARD = [10, 200, 30, 5]
+
+
+def test_garbled_card_is_the_ship_of_her_portrait():
+    """
+    On a picker not drawn yet, 'Nevada META' reads 'NN-d- AMET' and her fleet badge is missed.
+    """
+    moods = ShipMoods(Config())
+    moods.ships['Nevada META'] = ShipMood('Nevada META', mood=140, time=NOW, level=118, fleet=1,
+                                          card_sig=NEVADA_CARD)
+    garbled = PickerCard(row=0, col=1, name='NN-d- AMET', level=118, mood=112, sig=[11, 199, 30, 5])
+
+    update_moods(moods, [], [card(0, '', remove=True), garbled], NOW)
+
+    assert sorted(moods.ships) == ['Nevada META']
+    assert moods.ships['Nevada META'].mood == 112
+
+
+def test_garbled_name_of_no_known_portrait_is_left_out():
+    moods = ShipMoods(Config())
+    garbled = PickerCard(row=0, col=1, name='me～u METn', level=119, mood=142, fleet=1, sig=[1, 2, 3, 4])
+
+    update_moods(moods, [], [card(0, '', remove=True), garbled], NOW)
+
+    assert moods.ships == {}
+
+
+def test_resident_with_a_garbled_name_is_told_by_her_card():
+    """
+    The picker lists the ships of the second floor first, in the order of the dorm.
+    """
+    moods = ShipMoods(Config())
+    moods.ships['Kawakaze META'] = ShipMood('Kawakaze META', level=115, fleet=1)
+    dorm = [DormShip(place='rest', name='i-wi-L--^ Mc', level=115, mood=136, speed=50)]
+    cards = [card(0, '', remove=True), card(1, 'Kawakaze ME', fleet=1, mood=136, level=115, truncated=True)]
+
+    update_moods(moods, dorm, cards, NOW)
+
+    assert sorted(moods.ships) == ['Kawakaze META']
+    kawakaze = moods.ships['Kawakaze META']
+    assert (kawakaze.place, kawakaze.speed, kawakaze.mood) == ('rest', 50, 136)
+    assert dorm[0].known == 'Kawakaze META'
+
+
+def test_picker_read_before_it_is_drawn():
+    names = ['Fusou META', 'NN-d- AMET', 'i-wi-L--^ Mc', 'London (Ret', 'Hatakaze', 'ii++I Dwin']
+    drawn = ['Fusou META', 'Nevada META', 'Kawakaze ME', 'London (Ret', 'Hatakaze', '_Alsace']
+
+    assert not picker_drawn([card(0, '', remove=True)] + [card(i + 1, name) for i, name in enumerate(names)])
+    assert picker_drawn([card(0, '', remove=True)] + [card(i + 1, name) for i, name in enumerate(drawn)])
+
+
 def test_update_reads_ships_out_of_the_fleets_after_them():
     moods = ShipMoods(Config())
     two_hours_ago = NOW - timedelta(hours=2)
@@ -250,6 +302,26 @@ def test_lineup_ships_not_followed_yet_are_kept_by_level_and_portrait():
                                         '2': ['Fusou META', 'Dmitri Donskoi']}}
     assert [(slot['fleet'], slot['level']) for slot in saved.unknown['Event2']] == \
            [(1, 117), (1, 118), (2, 107), (2, 93), (2, 115), (2, 105)]
+
+
+def test_same_lineup_read_badly_keeps_the_one_read_before():
+    config = StorageConfig()
+    moods = ShipMoods(config)
+    for ship in dorm_ships():
+        moods.ships[ship.name] = ship
+    moods.save()
+    main = SimpleNamespace(config=config, device=SimpleNamespace(image=load('lineup.png')))
+    record_lineup(main)
+    first = ShipMoods(config).lineups['Event2']
+
+    # The same lineup, its portraits misread
+    moods = ShipMoods(config)
+    for ship in moods.ships.values():
+        ship.sig = None
+    moods.save()
+    record_lineup(main)
+
+    assert ShipMoods(config).lineups['Event2'] == first
 
 
 def test_ships_of_a_lineup_are_found_on_the_dock_by_level_and_portrait():

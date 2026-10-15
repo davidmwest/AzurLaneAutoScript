@@ -20,12 +20,13 @@ from module.base.button import Button
 from module.base.timer import Timer
 from module.base.utils import color_similar, crop, get_color
 from module.combat.level import LevelOcr
+from module.exception import GameTooManyClickError
 from module.logger import logger
 from module.mood.assets import *
 from module.mood.lineup import learn_lineup_ships
 from module.mood.plan import rest_plan, upcoming_jobs
 from module.mood.ship import DOCK_MOOD_MAX, DOCK_SPEED, ShipMood, ShipMoods, name_key, name_similarity, \
-    portrait_signature, tidy_name
+    plausible_name, portrait_signature, tidy_name
 from module.ocr.ocr import Digit, DigitCounter, Ocr
 from module.retire.assets import DOCK_CHECK, TEMPLATE_FLEET_1, TEMPLATE_FLEET_2, TEMPLATE_FLEET_3, \
     TEMPLATE_FLEET_4, TEMPLATE_FLEET_5, TEMPLATE_FLEET_6
@@ -78,6 +79,12 @@ REMOVE_SIMILARITY = 0.8
 LV_SIMILARITY = 0.75
 # A ship not seen in the dorm or in a fleet for this long is no longer followed, unless in a lineup
 FORGET_AFTER = timedelta(days=3)
+# Taps on a button of the dorm before giving up, the game may lag
+DORM_TAPS_MAX = 6
+# Share of names misread on the picker from which it is taken for not drawn yet
+PICKER_GARBLED_MAX = 0.25
+# A run that could not read the dorm tries again after this
+DORM_RETRY_MINUTES = 10
 
 
 @dataclass
@@ -88,6 +95,8 @@ class DormShip:
     mood: int
     speed: int
     sig: Optional[List[int]] = None
+    # Name of the ship followed, once told apart
+    known: str = ''
 
 
 @dataclass
@@ -410,9 +419,54 @@ def picker_low_mood_ended(cards, residents):
     return any(card.mood >= DOCK_MOOD_MAX for index, card in cards.items() if index >= end and not card.remove)
 
 
+def identify(moods, names, level, card_sig=None, dorm_sig=None, taken=()):
+    """
+    Args:
+        moods (ShipMoods):
+        names (list[str]): Names read for the ship, the most trusted first.
+        level (int): Level read.
+        card_sig (list[int]): Portrait of her card on the dock.
+        dorm_sig (list[int]): Portrait of her card in the dorm.
+        taken (set[str]): Names of the ships told apart already on the screen.
+
+    Returns:
+        ShipMood: The known ship, None if not known.
+    """
+    for name in names:
+        if not name:
+            continue
+        known = moods.find(name)
+        # Levels do not go down, a ship below is another of a similar name, like Nevada and Nevada META
+        if known is not None and known.name not in taken \
+                and not (level and known.level and level < known.level - 1):
+            return known
+    # A name misread
+    known = moods.find_by_portrait(level, card_sig, card=True, exclude=taken)
+    if known is None:
+        known = moods.find_by_portrait(level, dorm_sig, card=False, exclude=taken)
+    if known is not None:
+        logger.info(f'{names} is {known.name}, by level and portrait')
+    return known
+
+
+def new_ship(moods, names):
+    """
+    Returns:
+        ShipMood: A new ship followed, named after the first plausible name, None if none is.
+    """
+    for name in names:
+        if name and plausible_name(name) and name not in moods.ships:
+            ship = ShipMood(name=name)
+            moods.ships[name] = ship
+            return ship
+    return None
+
+
 def update_moods(moods, dorm, cards, now):
     """
     Remember what has been read.
+    A ship is known by her name. A name misread, as on a screen not drawn yet, is told by level and portrait,
+    a new ship is only taken from a plausible name, and what can not be told apart is left out.
 
     Args:
         moods (ShipMoods):
@@ -420,68 +474,78 @@ def update_moods(moods, dorm, cards, now):
         cards (list[PickerCard]):
         now (datetime):
     """
-    # Ships in the dorm, with their speed of recovery
-    in_dorm = set()
-    for ship in dorm:
+    taken = set()
+    listed = [card for card in sorted(cards, key=lambda c: c.index) if not card.remove]
+
+    # Ships in the dorm, with their speed of recovery.
+    # The picker lists them first, the second floor then the first, in the order of the dorm.
+    residents = [ship for ship in dorm if ship.place == 'rest'] + [ship for ship in dorm if ship.place == 'train']
+    for position, ship in enumerate(residents):
         # Her card on the picker tells her fleet, and her name if the dock did not cut it
-        scores = [(name_similarity(card.name, ship.name), card) for card in cards
-                  if not card.ship and not card.remove]
+        scores = [(name_similarity(card.name, ship.name), card) for card in listed if not card.ship]
         score, card = max(scores, key=lambda pair: pair[0], default=(0, None))
         if score <= 0:
-            card = None
-        known = moods.find(ship.name)
-        if known is None and card is not None:
-            known = moods.find(card.name)
+            card = listed[position] if position < len(listed) and not listed[position].ship else None
+            if card is not None and ship.level and card.level and abs(card.level - ship.level) > 1:
+                card = None
+        names = [ship.name] if card is None else [ship.name, card.name]
+        known = identify(moods, names, ship.level, card_sig=card.sig if card is not None else None,
+                         dorm_sig=ship.sig, taken=taken)
         if known is None:
-            name = card.name if card is not None and card.name and not card.truncated else ship.name
-            known = ShipMood(name=name)
-            moods.ships[name] = known
+            first = [card.name] if card is not None and not card.truncated else []
+            known = new_ship(moods, first + names)
+        if known is None:
+            logger.warning(f'Dorm {ship.place}: {ship.name} can not be told apart, left out')
+            continue
+        taken.add(known.name)
+        ship.known = known.name
         known.mood, known.time, known.place, known.speed = ship.mood, now, ship.place, ship.speed
         if ship.level:
             known.level = ship.level
         known.sig = ship.sig or known.sig
-        in_dorm.add(known.name)
         if card is not None:
             card.ship = known.name
+            known.card_sig = card.sig or known.card_sig
             known.fleet = 0 if card.submarine else card.fleet
             # Both screens show her mood, OCR rather drops a digit than adds one
             known.mood = max(known.mood, card.mood)
 
     # Ships in fleets, out of the dorm
-    for card in cards:
-        if card.remove or card.ship or not card.fleet or card.submarine or len(name_key(card.name)) < 2:
+    for card in listed:
+        if card.ship or not card.fleet or card.submarine:
             continue
-        known = moods.find(card.name)
-        if known is None or known.name in in_dorm:
-            known = ShipMood(name=card.name)
-            moods.ships[card.name] = known
+        known = identify(moods, [card.name], card.level, card_sig=card.sig, taken=taken)
+        if known is None:
+            known = new_ship(moods, [card.name])
+        if known is None:
+            logger.warning(f'Picker {card.index}: {card.name} can not be told apart, left out')
+            continue
+        taken.add(known.name)
         card.ship = known.name
         known.mood, known.time, known.place, known.speed = card.mood, now, 'dock', DOCK_SPEED
         known.level, known.fleet = card.level or known.level, card.fleet
         known.sig = known.sig or card.sig
+        known.card_sig = card.sig or known.card_sig
 
     # Ships in no fleet read after the ships in fleets, like ships of a lineup once they are low on mood
-    taken = {card.ship for card in cards if card.ship} | in_dorm
-    for card in cards:
-        if card.remove or card.ship or card.fleet or card.submarine or len(name_key(card.name)) < 2:
+    for card in listed:
+        if card.ship or card.fleet or card.submarine:
             continue
-        known = moods.find(card.name)
-        if known is None or known.name in taken:
+        known = identify(moods, [card.name], card.level, card_sig=card.sig, taken=taken)
+        if known is None:
             continue
-        # Levels do not go down, a ship below is another of a similar name, like Nevada and Nevada META
-        if card.level and known.level and card.level < known.level - 1:
-            continue
-        card.ship = known.name
         taken.add(known.name)
+        card.ship = known.name
         known.mood, known.time, known.place, known.speed = card.mood, now, 'dock', DOCK_SPEED
         known.level, known.fleet = card.level or known.level, 0
         known.sig = known.sig or card.sig
+        known.card_sig = card.sig or known.card_sig
     # Those not followed yet, known by level and portrait
     learn_lineup_ships(moods, cards, now)
 
     # Ships not seen are out of the dorm and of the fleets, they may still be in the lineup of a stage.
     # They are forgotten after a while.
-    seen = {card.ship for card in cards if card.ship} | in_dorm
+    seen = {card.ship for card in cards if card.ship} | taken
     in_lineups = moods.in_lineups()
     for name in list(moods.ships):
         if name in seen:
@@ -497,6 +561,28 @@ def update_moods(moods, dorm, cards, now):
     moods.read = now
 
 
+class DormReadError(Exception):
+    """
+    The dorm or its picker does not show as expected, like when the game lags.
+    Nothing is changed, the task tries again soon.
+    """
+    pass
+
+
+def picker_drawn(cards):
+    """
+    A picker read before it is drawn gives names like 'NN-d- AMET', and no fleet badges.
+
+    Returns:
+        bool: If most names read are plausible.
+    """
+    listed = [card for card in cards if not card.remove]
+    if not listed:
+        return False
+    garbled = sum(1 for card in listed if not plausible_name(card.name))
+    return garbled <= len(listed) * PICKER_GARBLED_MAX
+
+
 class DormRest(Dock):
     def dorm_ship_list_enter(self):
         """
@@ -506,6 +592,7 @@ class DormRest(Dock):
         """
         logger.info('Dorm ship list enter')
         click_timer = Timer(3)
+        taps = 0
         for _ in self.loop():
             # The dorm loads its room first, popups like the EXP of the first floor come up then
             if self.ui_additional(get_ship=False):
@@ -514,7 +601,10 @@ class DormRest(Dock):
             if self.dorm_ship_list_tab():
                 break
             if self.appear(DORM_CHECK, offset=(20, 20)) and click_timer.reached():
+                if taps >= DORM_TAPS_MAX:
+                    raise DormReadError('Dorm ship list does not open')
                 self.device.click(DORM_SHIP_LIST_ENTER)
+                taps += 1
                 click_timer.reset()
                 continue
 
@@ -527,12 +617,17 @@ class DormRest(Dock):
 
     def dorm_ship_list_set_tab(self, place):
         logger.info(f'Dorm ship list tab: {place}')
-        click_timer = Timer(2)
+        self.device.click_record_clear()
+        click_timer = Timer(3)
+        taps = 0
         for _ in self.loop():
             if self.dorm_ship_list_tab() == place:
                 break
             if click_timer.reached():
+                if taps >= DORM_TAPS_MAX:
+                    raise DormReadError(f'Dorm ship list does not switch to {place}')
                 self.device.click(DORM_TABS[place])
+                taps += 1
                 click_timer.reset()
         self.dorm_ship_list_wait_portraits()
 
@@ -577,9 +672,15 @@ class DormRest(Dock):
             in: dorm ship list
         """
         self.dorm_ship_list_set_tab(place)
-        ships, slots = read_dorm_floor(self.device.image, place)
-        logger.info(f'Dorm {place}: {[(ship.name, ship.mood) for ship in ships]}, slots: {slots}')
-        return ships, slots
+        for _ in range(3):
+            ships, slots = read_dorm_floor(self.device.image, place)
+            logger.info(f'Dorm {place}: {[(ship.name, ship.mood) for ship in ships]}, slots: {slots}')
+            # A list not drawn yet reads like [('ec', 0), ('pn', 0)]
+            if all(ship.level and len(name_key(ship.name)) >= 3 for ship in ships):
+                return ships, slots
+            self.device.sleep(1)
+            self.device.screenshot()
+        raise DormReadError(f'Dorm {place} can not be read')
 
     def picker_enter(self):
         """
@@ -590,11 +691,15 @@ class DormRest(Dock):
         logger.info('Dorm picker enter')
         card = dialog_buttons(20, 300, 136, 400, 'DORM_CARD')[0]
         click_timer = Timer(3)
+        taps = 0
         for _ in self.loop():
             if self.appear(DOCK_CHECK, offset=(20, 20)):
                 break
             if click_timer.reached() and self.dorm_ship_list_tab() == 'rest':
+                if taps >= DORM_TAPS_MAX:
+                    raise DormReadError('Dorm picker does not open')
                 self.device.click(card)
+                taps += 1
                 click_timer.reset()
         self.handle_dock_cards_loading()
 
@@ -687,6 +792,7 @@ class DormRest(Dock):
             in: DOCK_CHECK, the picker, at the top of the list
         """
         logger.hr('Dorm picker scan', level=2)
+        self.device.click_record_clear()
         self.dock_favourite_set(False, wait_loading=False)
         self.dock_filter_set(sort='mood')
         self.dock_sort_method_dsc_set(False)
@@ -829,6 +935,23 @@ class DormRest(Dock):
         """
         Pages:
             in: Any page
+            out: page_dorm, or page_main if the dorm could not be read
+        """
+        try:
+            self.rest_ships()
+        except (DormReadError, GameTooManyClickError) as e:
+            # The game lags, leave everything as it is
+            logger.warning(f'Dorm rest: {e}, trying again in {DORM_RETRY_MINUTES} minutes')
+            self.device.click_record_clear()
+            self.ui_goto_main()
+            self.config.task_delay(minute=DORM_RETRY_MINUTES)
+            return
+        self.config.task_delay(success=True)
+
+    def rest_ships(self):
+        """
+        Pages:
+            in: Any page
             out: page_dorm
         """
         moods = ShipMoods(self.config)
@@ -842,10 +965,12 @@ class DormRest(Dock):
         # Ships of a lineup in no fleet are read with the others low on mood
         lineup_only = [name for name in moods.in_lineups() if name in moods.ships and not moods.ships[name].fleet]
         cards = self.picker_scan(residents, low_mood=bool(moods.unknown or lineup_only))
+        if not picker_drawn(cards):
+            raise DormReadError('Dorm picker read before it was drawn')
         now = datetime.now().replace(microsecond=0)
         update_moods(moods, train + rest, cards, now)
         # Selected on the picker: the ships of the second floor, but the one whose card opened it
-        selected = {moods.find(ship.name).name for ship in rest[1:]}
+        selected = {ship.known for ship in rest[1:] if ship.known}
         for card in cards:
             if card.ship:
                 if card.selected != (card.ship in selected):
@@ -858,8 +983,8 @@ class DormRest(Dock):
         for job in jobs:
             job.names = [name for name in job.names if name in on_picker]
             logger.info(f'Task {job.task}: {job.names}, weight {job.weight}')
-        rest_names = [moods.find(ship.name).name for ship in rest]
-        train_names = [moods.find(ship.name).name for ship in train]
+        rest_names = [ship.known for ship in rest if ship.known]
+        train_names = [ship.known for ship in train if ship.known]
         plan = rest_plan(jobs, moods, rest_names, train_names, capacity, now)
         logger.attr('Rest now', rest_names)
         logger.attr('Rest plan', plan)
@@ -878,7 +1003,7 @@ class DormRest(Dock):
             rest, _ = self.dorm_floor_read('rest')
             resting = set()
             for ship in rest:
-                known = moods.find(ship.name)
+                known = identify(moods, [ship.name], ship.level, dorm_sig=ship.sig, taken=resting)
                 if known is not None:
                     known.place, known.speed, known.mood, known.time = 'rest', ship.speed, ship.mood, now
                     resting.add(known.name)
@@ -888,7 +1013,6 @@ class DormRest(Dock):
                     moods.ships[name].place, moods.ships[name].speed = 'dock', DOCK_SPEED
         moods.save()
         self.dorm_ship_list_quit()
-        self.config.task_delay(success=True)
 
     def picker_apply(self, cards, plan):
         """

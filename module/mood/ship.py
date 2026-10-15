@@ -22,6 +22,8 @@ DOCK_MOOD_MAX = 119
 DOCK_SPEED = 20
 # Where a ship is: on the second floor of the dorm, on the first floor, or anywhere else
 PLACES = ('rest', 'train', 'dock')
+# Two portraits of the same screen are the same ship from this similarity, see ShipMoods.find_by_portrait()
+SAME_SHIP_PORTRAIT = 0.95
 TIME_FORMAT = '%Y-%m-%d %H:%M:%S'
 
 
@@ -47,6 +49,25 @@ def tidy_name(name):
         else:
             words.append(token)
     return ' '.join(words)
+
+
+def plausible_name(name):
+    """
+    A screen read before it is drawn gives names like 'NN-d- AMET' or 'me～u METn'.
+
+    Returns:
+        bool: If a name read can be the name of a new ship.
+    """
+    name = str(name).strip()
+    # Z52 is a ship
+    if len(re.findall(r'[A-Za-zÀ-ÿ0-9]', name)) < 3 or not re.search(r'[A-Za-zÀ-ÿ]', name):
+        return False
+    if re.search(r"[^A-Za-zÀ-ÿ0-9 ().'&!?-]", name):
+        return False
+    # Hyphens are inside words, like in U-557
+    if re.search(r'--|^-|-$|-\s|\s-', name):
+        return False
+    return True
 
 
 def common_substring(a, b):
@@ -141,8 +162,10 @@ class ShipMood:
     level: int = 0
     # Common fleet 1 to 6 she is in, 0 for none
     fleet: int = 0
-    # See portrait_signature()
+    # See portrait_signature(), of her portrait in the dorm, or else on the dock
     sig: Optional[List[int]] = None
+    # Of her card on the dock, compared with cards only
+    card_sig: Optional[List[int]] = None
 
     @property
     def cap(self):
@@ -202,6 +225,8 @@ class ShipMood:
         }
         if self.sig:
             data['sig'] = list(self.sig)
+        if self.card_sig:
+            data['card_sig'] = list(self.card_sig)
         return data
 
     @classmethod
@@ -215,6 +240,7 @@ class ShipMood:
             level=int(data.get('level', 0)),
             fleet=int(data.get('fleet', 0)),
             sig=data.get('sig') or None,
+            card_sig=data.get('card_sig') or None,
         )
 
 
@@ -226,7 +252,8 @@ class ShipMoods:
             'ships': {name: ShipMood.to_dict()},
             'lineups': {task: {'1': [names], '2': [names]}}, lineups of stages that have their own,
             'unknown': {task: [{'fleet': 1, 'level': 100, 'sig': [...]}]}, ships of those lineups
-                not followed yet, known by level and portrait only
+                not followed yet, known by level and portrait only,
+            'lineup_levels': {task: [levels of the 12 slots]}, when the lineup was read
         }
     """
     KEYS = 'DormRest.Storage.Storage'
@@ -243,6 +270,8 @@ class ShipMoods:
             name: ShipMood.from_dict(name, ship) for name, ship in data.get('ships', {}).items()}
         self.lineups: Dict[str, Dict[str, List[str]]] = data.get('lineups', {}) or {}
         self.unknown: Dict[str, List[dict]] = data.get('unknown', {}) or {}
+        # Levels of the slots of a lineup when it was read, to tell the same lineup read again
+        self.lineup_levels: Dict[str, List[int]] = data.get('lineup_levels', {}) or {}
 
     def to_dict(self):
         return {
@@ -250,6 +279,7 @@ class ShipMoods:
             'ships': {name: ship.to_dict() for name, ship in self.ships.items()},
             'lineups': self.lineups,
             'unknown': self.unknown,
+            'lineup_levels': self.lineup_levels,
         }
 
     def save(self):
@@ -266,6 +296,32 @@ class ShipMoods:
         best, score = None, 0.
         for ship in self.ships.values():
             similarity = name_similarity(name, ship.name)
+            if similarity > score:
+                best, score = ship, similarity
+        return best
+
+    def find_by_portrait(self, level, sig, card=False, exclude=()):
+        """
+        A ship whose name was misread, told by her level and portrait.
+        The same ship on the same screen scores 0.98 and more, two destroyers of a class at the same level 0.86.
+
+        Args:
+            level (int): Level read, she may be a level above.
+            sig (list[int]): Portrait signature read.
+            card (bool): If the portrait is of a card on the dock, compared with the cards seen before.
+            exclude: Names of the ships told apart already.
+
+        Returns:
+            ShipMood: The known ship with the most similar portrait, None if none is similar enough.
+        """
+        if not sig or not level:
+            return None
+        best, score = None, SAME_SHIP_PORTRAIT
+        for ship in self.ships.values():
+            known = (ship.card_sig or ship.sig) if card else ship.sig
+            if ship.name in exclude or not known or not ship.level or abs(ship.level - level) > 1:
+                continue
+            similarity = portrait_similarity(sig, known)
             if similarity > score:
                 best, score = ship, similarity
         return best

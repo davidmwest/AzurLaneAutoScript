@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 
 import pytest
 
-from module.mood.ship import ShipMood, ShipMoods, name_similarity, portrait_similarity, tidy_name
+from module.mood.ship import ShipMood, ShipMoods, name_similarity, plausible_name, portrait_similarity, tidy_name
 
 # A tick of mood recovery starts every 6 minutes
 T0 = datetime(2026, 10, 14, 8, 0, 0)
@@ -47,6 +47,32 @@ def test_complete_name_is_preferred_over_a_longer_one():
 ])
 def test_tidy_name(name, tidy):
     assert tidy_name(name) == tidy
+
+
+@pytest.mark.parametrize('name', ['Kawakaze ME', 'London (Ret', 'U-557', 'Z52', 'Béarn META', 'lana Astar Deviluk'])
+def test_plausible_names(name):
+    assert plausible_name(name)
+
+
+# Read on a picker not drawn yet
+@pytest.mark.parametrize('name', ['NN-d- AMET', 'me～u METn', 'i-wi-L--^ Mc', 'ii++I Dwin', 'ec', '_Alsace', ''])
+def test_garbled_names(name):
+    assert not plausible_name(name)
+
+
+def test_misread_ship_is_found_by_level_and_portrait():
+    moods = ShipMoods(Config())
+    moods.ships['Nevada META'] = ShipMood('Nevada META', level=118, card_sig=[10, 200, 30, 5])
+    moods.ships['Oite'] = ShipMood('Oite', level=119, card_sig=[200, 10, 10, 10], sig=[11, 199, 30, 5])
+
+    assert moods.find_by_portrait(118, [11, 199, 30, 5], card=True).name == 'Nevada META'
+    # Told apart already on the same screen
+    assert moods.find_by_portrait(118, [11, 199, 30, 5], card=True, exclude={'Nevada META'}) is None
+    # Same colors at another level
+    assert moods.find_by_portrait(110, [11, 199, 30, 5], card=True) is None
+    # Portraits of the dorm are compared with portraits of the dorm only
+    assert moods.find_by_portrait(119, [11, 199, 30, 5], card=False).name == 'Oite'
+    assert moods.find_by_portrait(119, [200, 10, 10, 10], card=False) is None
 
 
 def test_mood_recovers_by_place_up_to_its_cap():
