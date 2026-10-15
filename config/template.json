@@ -17,6 +17,7 @@
     "Error": {
       "HandleError": true,
       "KeepRunning": true,
+      "LoggedOutWait": 60,
       "SaveError": true,
       "OnePushConfig": "provider: null",
       "ScreenshotLength": 1

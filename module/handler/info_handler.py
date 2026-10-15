@@ -4,7 +4,7 @@ from module.base.base import ModuleBase
 from module.base.button import Button
 from module.base.timer import Timer
 from module.base.utils import *
-from module.exception import GameNotRunningError
+from module.exception import GameLoggedOutError, GameNotRunningError
 from module.handler.assets import *
 from module.logger import logger
 from module.os_handler.assets import CLICK_SAFE_AREA as OS_CLICK_SAFE_AREA
@@ -179,6 +179,8 @@ class InfoHandler(ModuleBase):
                              'probably because account kicked by server maintenance or another log in')
                 # Kill game, because game patches after maintenance can only be downloaded at game startup
                 self.device.app_stop()
+                if self.config.Error_LoggedOutWait > 0:
+                    raise GameLoggedOutError('Account logged out')
                 raise GameNotRunningError
             self._hot_fix_check_wait.clear()
 

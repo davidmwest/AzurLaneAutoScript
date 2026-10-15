@@ -357,12 +357,17 @@ class Device(Screenshot, Control, AppControl):
         self.click_record_check = empty_function
         self.stuck_record_check = empty_function
 
+    # If the game was seen logged in since Alas started or stopped it. A login page after that
+    # means the account was logged out, like by a log in on another device.
+    logged_in = False
+
     def app_start(self):
         if not self.config.Error_HandleError:
             logger.critical('No app stop/start, because HandleError disabled')
             logger.critical('Please enable Alas.Error.HandleError or manually login to AzurLane')
             raise RequestHumanTakeover
         super().app_start()
+        self.logged_in = False
         self.stuck_record_clear()
         self.click_record_clear()
 
@@ -372,5 +377,6 @@ class Device(Screenshot, Control, AppControl):
             logger.critical('Please enable Alas.Error.HandleError or manually login to AzurLane')
             raise RequestHumanTakeover
         super().app_stop()
+        self.logged_in = False
         self.stuck_record_clear()
         self.click_record_clear()

@@ -67,6 +67,9 @@ class Runner(SimpleNamespace):
             config_name='alas',
             device=SimpleNamespace(screenshot=Mock(), sleep=Mock(), package='com.YoStarEN.AzurLane'),
             save_error_log=Mock(),
+            # The game is not at its login page
+            logged_out_on_screen=Mock(return_value=False),
+            handle_logged_out=Mock(),
             event2=task,
         )
 
@@ -138,7 +141,29 @@ def test_next_task_holds_while_paused_first(monkeypatch):
         return task
 
     config = SimpleNamespace(get_next=get_next, bind=Mock(), task=None)
-    scheduler = SimpleNamespace(config=config, wait_while_paused=lambda: calls.append('hold'))
+    scheduler = SimpleNamespace(config=config, wait_while_paused=lambda: calls.append('hold'),
+                                wait_while_logged_out=lambda: calls.append('logged out'))
 
     assert AzurLaneAutoScript.get_next_task(scheduler) == 'Event2'
-    assert calls == ['hold', 'get_next']
+    assert calls == ['hold', 'logged out', 'get_next']
+
+
+def test_logged_out_during_a_task_waits_instead_of_restarting_at_once():
+    from module.exception import GameLoggedOutError
+    runner = Runner(keep_running=True, error=GameLoggedOutError('Login page during a task'))
+
+    assert AzurLaneAutoScript.run(runner, 'event2') is False
+
+    runner.handle_logged_out.assert_called_once_with()
+    runner.config.task_call.assert_not_called()
+
+
+def test_stuck_at_the_login_page_waits_too():
+    from module.exception import GameStuckError
+    runner = Runner(keep_running=True, error=GameStuckError('Wait too long'))
+    runner.logged_out_on_screen = Mock(return_value=True)
+
+    assert AzurLaneAutoScript.run(runner, 'event2') is False
+
+    runner.handle_logged_out.assert_called_once_with()
+    runner.config.task_call.assert_not_called()

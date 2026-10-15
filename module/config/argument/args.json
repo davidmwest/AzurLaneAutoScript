@@ -188,6 +188,10 @@
         "type": "checkbox",
         "value": true
       },
+      "LoggedOutWait": {
+        "type": "input",
+        "value": 60
+      },
       "SaveError": {
         "type": "checkbox",
         "value": true

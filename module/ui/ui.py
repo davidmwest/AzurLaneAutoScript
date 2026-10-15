@@ -2,7 +2,7 @@ from module.base.button import Button
 from module.base.decorator import run_once
 from module.base.timer import Timer
 from module.combat.assets import GET_ITEMS_1, GET_ITEMS_2, GET_SHIP
-from module.exception import (GameNotRunningError, GamePageUnknownError,
+from module.exception import (GameLoggedOutError, GameNotRunningError, GamePageUnknownError,
                               RequestHumanTakeover)
 from module.exercise.assets import EXERCISE_PREPARATION
 from module.handler.assets import (AUTO_SEARCH_MENU_EXIT, BATTLE_PASS_NEW_SEASON, BATTLE_PASS_NOTICE, GAME_TIPS,
@@ -196,6 +196,7 @@ class UI(InfoHandler):
                 if self.ui_page_appear(page=page):
                     logger.attr("UI", page.name)
                     self.ui_current = page
+                    self.device.logged_in = True
                     return page
 
             # Unknown page but able to handle
@@ -552,7 +553,12 @@ class UI(InfoHandler):
                 self.interval_reset(WITHDRAW)
 
         # Login
-        if self.appear_then_click(LOGIN_CHECK, offset=(30, 30), interval=3):
+        if self.appear(LOGIN_CHECK, offset=(30, 30), interval=3):
+            # Logged out during a task. Logging in again would log out whoever plays on another device,
+            # the scheduler waits first, see Error.LoggedOutWait
+            if self.config.Error_LoggedOutWait > 0 and getattr(self.device, 'logged_in', False):
+                raise GameLoggedOutError('Login page during a task, the account was logged out')
+            self.device.click(LOGIN_CHECK)
             return True
         if self.appear_then_click(MAINTENANCE_ANNOUNCE, offset=(30, 30), interval=3):
             return True

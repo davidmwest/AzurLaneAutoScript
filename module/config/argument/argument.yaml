@@ -84,6 +84,7 @@ EmulatorInfo:
 Error:
   HandleError: true
   KeepRunning: true
+  LoggedOutWait: 60
   SaveError: true
   OnePushConfig:
     type: textarea

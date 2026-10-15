@@ -552,6 +552,10 @@
       "name": "Keep Running",
       "help": "For running unattended. When the game is on a screen Alas does not know, or something goes wrong that Alas does not handle, restart the game instead of stopping. When a task fails 3 times in a row, put that task off, for 20 minutes at first and longer each time, and go on with the others, instead of stopping.\nOff: stop and wait for you in these cases"
     },
+    "LoggedOutWait": {
+      "name": "Wait After Being Logged Out (minutes)",
+      "help": "When the account logs out during a task, most likely because you logged in on another device, the game is closed and Alas waits this long before logging in again, so it does not log you out. 0 logs in again at once"
+    },
     "SaveError": {
       "name": "Record Exception",
       "help": "Records exception and log into directory for review or sharing"

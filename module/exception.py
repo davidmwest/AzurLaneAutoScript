@@ -53,6 +53,12 @@ class EmulatorNotRunningError(Exception):
     pass
 
 
+class GameLoggedOutError(Exception):
+    # The game went back to its login page during a task, most likely because the account
+    # logged in on another device
+    pass
+
+
 class GameNotRunningError(Exception):
     pass
 

@@ -50,6 +50,7 @@ class LoginHandler(UI):
             if self.is_in_main():
                 if confirm_timer.reached():
                     logger.info('Login to main confirm')
+                    self.device.logged_in = True
                     break
             else:
                 confirm_timer.reset()
@@ -95,6 +96,7 @@ class LoginHandler(UI):
                 continue
             # Popups appear at page_main
             if self.ui_page_main_popups(get_ship=login_success):
+                self.device.logged_in = True
                 return True
             # Always goto page_main
             if self.appear_then_click(GOTO_MAIN, offset=(30, 30), interval=5):

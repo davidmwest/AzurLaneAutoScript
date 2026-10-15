@@ -35,6 +35,8 @@ def failed_task_delay(previous=None):
 
 class AzurLaneAutoScript:
     stop_event: threading.Event = None
+    # Logged out during a task, most likely by a log in on another device: no log in before this time
+    logged_out_until = None
 
     def __init__(self, config_name='alas'):
         logger.hr('Start', level=0)
@@ -90,6 +92,10 @@ class AzurLaneAutoScript:
             return True
         except TaskEnd:
             return True
+        except GameLoggedOutError as e:
+            logger.warning(e)
+            self.handle_logged_out()
+            return False
         except GameNotRunningError as e:
             logger.warning(e)
             self.config.task_call('Restart')
@@ -97,6 +103,9 @@ class AzurLaneAutoScript:
         except (GameStuckError, GameTooManyClickError) as e:
             logger.error(e)
             self.save_error_log()
+            if self.logged_out_on_screen():
+                self.handle_logged_out()
+                return False
             logger.warning(f'Game stuck, {self.device.package} will be restarted in 10 seconds')
             logger.warning('If you are playing by hand, please stop Alas')
             self.config.task_call('Restart')
@@ -105,12 +114,18 @@ class AzurLaneAutoScript:
         except GameBugError as e:
             logger.warning(e)
             self.save_error_log()
+            if self.logged_out_on_screen():
+                self.handle_logged_out()
+                return False
             logger.warning('An error has occurred in Azur Lane game client, Alas is unable to handle')
             logger.warning(f'Restarting {self.device.package} to fix it')
             self.config.task_call('Restart')
             self.device.sleep(10)
             return False
         except GamePageUnknownError:
+            if self.logged_out_on_screen():
+                self.handle_logged_out()
+                return False
             logger.info('Game server may be under maintenance or network may be broken, check server status now')
             self.checker.check_now()
             if self.checker.is_available():
@@ -152,6 +167,9 @@ class AzurLaneAutoScript:
         except Exception as e:
             logger.exception(e)
             self.save_error_log()
+            if self.logged_out_on_screen():
+                self.handle_logged_out()
+                return False
             if self.config.Error_KeepRunning:
                 # Whatever it was, a restart of the game is where every task can start from.
                 # A task that keeps failing like this is put off by the scheduler.
@@ -574,6 +592,64 @@ class AzurLaneAutoScript:
         del_cached_property(self, 'config')
         return minutes
 
+    def logged_out_on_screen(self):
+        """
+        Returns:
+            bool: If the game shows its login page, or a popup that asks to log in again.
+                Always False if Error.LoggedOutWait is 0.
+        """
+        if self.config.Error_LoggedOutWait <= 0:
+            return False
+        # A login page is expected until the game is logged in, like after an update
+        if not getattr(self.device, 'logged_in', False):
+            return False
+        try:
+            from module.handler.logged_out import logged_out
+            self.device.screenshot()
+            return logged_out(self.device.image)
+        except Exception as e:
+            logger.warning(f'Can not check if the account was logged out: {e}')
+            return False
+
+    def handle_logged_out(self):
+        """
+        The account was logged out during a task, most likely because it logged in on another device.
+        Logging in again at once would log that device out: stop the game and log in again later.
+        """
+        minutes = max(int(self.config.Error_LoggedOutWait), 0)
+        self.logged_out_until = datetime.now() + timedelta(minutes=minutes)
+        logger.warning(f'The account was logged out, maybe it logged in on another device. '
+                       f'Logging in again at {self.logged_out_until.strftime("%H:%M")}')
+        try:
+            self.device.app_stop()
+        except Exception as e:
+            logger.warning(f'Can not stop the game: {e}')
+        self.config.task_call('Restart')
+
+    def wait_while_logged_out(self):
+        """
+        Hold between tasks until the time to log in again, see handle_logged_out().
+
+        Returns:
+            bool: If waited.
+        """
+        if self.logged_out_until is None or datetime.now() >= self.logged_out_until:
+            self.logged_out_until = None
+            return False
+
+        logger.hr('Logged out', level=1)
+        logger.info(f'Waiting until {self.logged_out_until.strftime("%H:%M")} before logging in again')
+        write_scheduler_state(self.config_name, task='LoggedOut', paused=True)
+        while datetime.now() < self.logged_out_until:
+            if self.stop_event is not None and self.stop_event.is_set():
+                break
+            time.sleep(5)
+        self.logged_out_until = None
+        logger.info('Logging in again')
+        write_scheduler_state(self.config_name)
+        del_cached_property(self, 'config')
+        return True
+
     def wait_while_paused(self):
         """
         Hold between tasks while ./config/<config_name>.pause exists,
@@ -607,6 +683,8 @@ class AzurLaneAutoScript:
         while 1:
             # A pause may come while waiting for the next task
             self.wait_while_paused()
+            # Someone may play on another device
+            self.wait_while_logged_out()
             task = self.config.get_next()
             self.config.task = task
             self.config.bind(task)
