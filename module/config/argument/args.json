@@ -9469,6 +9469,12 @@
         "value": "Array"
       }
     },
+    "ProtoShop": {
+      "BuySpecializedBulin": {
+        "type": "checkbox",
+        "value": false
+      }
+    },
     "Storage": {
       "Storage": {
         "type": "storage",

@@ -328,6 +328,9 @@ class GeneratedConfig:
     # Group `CoreShop`
     CoreShop_Filter = 'Array'
 
+    # Group `ProtoShop`
+    ProtoShop_BuySpecializedBulin = False
+
     # Group `ShipyardDr`
     ShipyardDr_ResearchSeries = 2  # 2, 3, 4, 5
     ShipyardDr_ShipIndex = 0  # 0, 1, 2, 3, 4, 5, 6

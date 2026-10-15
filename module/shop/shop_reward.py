@@ -4,6 +4,7 @@ from module.shop.shop_general import GeneralShop_250814
 from module.shop.shop_guild import GuildShop_250814
 from module.shop.shop_medal import MedalShop2_250814
 from module.shop.shop_merit import MeritShop_250814
+from module.shop.shop_proto import ProtoShop_250814
 from module.shop.ui import ShopUI
 
 
@@ -34,7 +35,8 @@ class RewardShop(ShopUI):
 
     def run_monthly(self):
         """
-        Task ShopMonthly, the shops of the monthly tab that restock every month: core data and medals.
+        Task ShopMonthly, the shops of the monthly tab that restock every month: core data and medals,
+        and the Specialized Bulin of the proto shop if wanted.
         """
         self.ui_goto_shop()
         self.device.click_record_clear()
@@ -46,6 +48,12 @@ class RewardShop(ShopUI):
         self.shop_nav_250814.set(NAV_MONTHLY, main=self)
         self.shop_tab_250814.set(TAB_MEDAL, main=self)
         MedalShop2_250814(self.config, self.device).run()
+
+        if self.config.ProtoShop_BuySpecializedBulin:
+            self.device.click_record_clear()
+            self.shop_nav_250814.set(NAV_MONTHLY, main=self)
+            self.shop_tab_250814.set(TAB_PROTOTYPE, main=self)
+            ProtoShop_250814(self.config, self.device).run()
 
         self.config.task_delay(server_update=True)
 

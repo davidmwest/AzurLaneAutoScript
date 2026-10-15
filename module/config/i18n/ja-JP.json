@@ -2146,6 +2146,16 @@
       "help": "CoreShop.Filter.help"
     }
   },
+  "ProtoShop": {
+    "_info": {
+      "name": "プロトショップ",
+      "help": ""
+    },
+    "BuySpecializedBulin": {
+      "name": "特装型ブリMKIIIを購入",
+      "help": "プロトタブの特装型ブリMKIII（全ての超レア艦船の限界突破に使えます）を、タブの通貨で買えるだけ購入します。デフォルトはオフ：購入上限がなく、1つごとにドックの枠を1つ使います"
+    }
+  },
   "ShipyardDr": {
     "_info": {
       "name": "ShipyardDr._info.name",

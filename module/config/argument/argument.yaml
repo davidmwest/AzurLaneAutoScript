@@ -605,6 +605,8 @@ MeritShop:
 CoreShop:
   Filter: |-
     Array
+ProtoShop:
+  BuySpecializedBulin: false
 ShipyardDr:
   ResearchSeries:
     value: 2

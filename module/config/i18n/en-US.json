@@ -2146,6 +2146,16 @@
       "help": "All options have been defined at <https://github.com/LmeSzinc/AzurLaneAutoScript/wiki/reward_shop_filter_string>\nHowever unlike other shops, only Chip and Array are supported\nALAS does not browse, scroll, or recognize any other items displayed besides those two"
     }
   },
+  "ProtoShop": {
+    "_info": {
+      "name": "Proto Shop",
+      "help": ""
+    },
+    "BuySpecializedBulin": {
+      "name": "Buy Specialized Bulin MKIII",
+      "help": "Buys the Specialized Bulin Custom MKIII of the Proto tab, which limit breaks any Ultra Rare ship, as many as the currency of the tab allows. Off by default: it has no limit and each one takes a place in the dock"
+    }
+  },
   "ShipyardDr": {
     "_info": {
       "name": "DR Blueprints Purchase Settings",

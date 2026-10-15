@@ -2146,6 +2146,16 @@
       "help": ""
     }
   },
+  "ProtoShop": {
+    "_info": {
+      "name": "原型商店",
+      "help": ""
+    },
+    "BuySpecializedBulin": {
+      "name": "購買特裝型布里MKIII",
+      "help": "在原型頁面購買特裝型布里MKIII（可用於突破所有超稀有艦船），用該頁面的貨幣能買多少就買多少。預設關閉：它沒有購買上限，每個都會佔用一個船塢位置"
+    }
+  },
   "ShipyardDr": {
     "_info": {
       "name": "彩科研圖紙購買設定",

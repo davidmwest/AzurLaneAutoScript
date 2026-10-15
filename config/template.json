@@ -1750,6 +1750,9 @@
     "CoreShop": {
       "Filter": "Array"
     },
+    "ProtoShop": {
+      "BuySpecializedBulin": false
+    },
     "Storage": {
       "Storage": {}
     }
