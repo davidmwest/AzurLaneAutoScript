@@ -61,6 +61,13 @@ class ProtoShop_250814(ShopClerk):
             else:
                 timer.reset()
 
+    def shop_buy_handle(self, item):
+        """
+        The Info popup of the proto shop sits a few pixels aside of the other popups,
+        its Cancel button is not found with the offset of handle_popup_confirm().
+        """
+        return self.handle_popup_confirm('PROTO_BUY', offset=(10, 30))
+
     def proto_find_bulin(self):
         """
         Returns:

@@ -53,6 +53,19 @@ def test_specialized_bulin_is_found_on_the_proto_tab():
     assert OCR_PROTO_BALANCE.ocr(shop.device.image) == 34254
 
 
+def test_buy_popup_is_confirmed():
+    """
+    Its buttons sit a few pixels aside of the other popups.
+    """
+    shop = proto_shop()
+    shop.device = SimpleNamespace(image=load('proto_buy_popup.png'), click=Mock(), stuck_record_add=Mock())
+    shop.interval_timer = {}
+
+    assert not ProtoShop_250814.handle_popup_confirm(shop, 'DEFAULT_OFFSET')
+    assert shop.shop_buy_handle(PROTO_CARDS[4])
+    assert shop.device.click.call_count == 1
+
+
 def test_nothing_is_bought_by_default():
     shop = proto_shop(enabled=False)
     shop.shop_buy_execute = Mock()
