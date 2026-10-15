@@ -3,19 +3,19 @@ Proto tab of the monthly shops.
 Its Specialized Bulin Custom MKIII limit breaks any Ultra Rare ship. It has no limit and each one takes a place in
 the dock, so it is only bought if ProtoShop.BuySpecializedBulin is on, then as many as the currency allows.
 """
-import re
-
 from module.base.button import Button
+from module.base.template import Template
 from module.base.timer import Timer
+from module.base.utils import crop
 from module.logger import logger
-from module.ocr.ocr import Digit, Ocr
+from module.ocr.ocr import Digit
 from module.shop.assets import SHOP_OCR_BALANCE
 from module.shop.clerk import ShopClerk
 from module.ui.assets import SHOP_BACK_ARROW
 
-# Cards of the shop, 5 per row: x of their middle, then top, name and price of each row
+# Cards of the shop, 5 per row: x of their middle, then top and price of each row
 CARD_CENTERS = [297, 466, 635, 804, 972]
-CARD_ROWS = [(196, 313, 362), (420, 537, 586)]
+CARD_ROWS = [(196, 362), (420, 586)]
 # A run buys this many at most
 PROTO_BUY_MAX = 20
 
@@ -30,19 +30,13 @@ def _buttons(name, x1, y1, x2, y2, row_y):
 
 
 PROTO_CARDS = _buttons('PROTO_CARD', -40, 30, 40, 100, row_y=0)
-OCR_PROTO_NAMES = Ocr(_buttons('PROTO_NAME', -72, 0, 72, 24, row_y=1), lang='cnocr', letter=(40, 40, 40),
-                      threshold=128, name='OCR_PROTO_NAMES')
-OCR_PROTO_PRICES = Digit(_buttons('PROTO_PRICE', -20, 0, 56, 24, row_y=2), letter=(255, 255, 255), threshold=128,
+# Around the icon of each card. The item is told by its icon, as long names scroll on their card
+# and a screenshot shows any part of them, 'n Custom MKIII' may be the name of another item.
+PROTO_ICONS = _buttons('PROTO_ICON', -45, 30, 45, 120, row_y=0)
+OCR_PROTO_PRICES = Digit(_buttons('PROTO_PRICE', -20, 0, 56, 24, row_y=1), letter=(255, 255, 255), threshold=128,
                          name='OCR_PROTO_PRICES')
 OCR_PROTO_BALANCE = Digit(SHOP_OCR_BALANCE, letter=(100, 100, 100), name='OCR_PROTO_BALANCE')
-
-
-def is_specialized_bulin(name):
-    """
-    The card cuts the name at both sides, like 'becialized Buli'
-    """
-    key = re.sub(r'[^a-z]', '', str(name).lower())
-    return 'cialized' in key and 'bul' in key
+TEMPLATE_SPECIALIZED_BULIN = Template('./assets/shop/proto/SpecializedBulin.png')
 
 
 class ProtoShop_250814(ShopClerk):
@@ -73,11 +67,9 @@ class ProtoShop_250814(ShopClerk):
         Returns:
             tuple[Button, int]: Card of the Specialized Bulin and its price, (None, 0) if not on the shop.
         """
-        names = OCR_PROTO_NAMES.ocr(self.device.image)
-        prices = OCR_PROTO_PRICES.ocr(self.device.image)
-        for card, name, price in zip(PROTO_CARDS, names, prices):
-            if is_specialized_bulin(name):
-                return card, price
+        for index, icon in enumerate(PROTO_ICONS):
+            if TEMPLATE_SPECIALIZED_BULIN.match(crop(self.device.image, icon.area)):
+                return PROTO_CARDS[index], OCR_PROTO_PRICES.ocr(self.device.image)[index]
         return None, 0
 
     def run(self):
